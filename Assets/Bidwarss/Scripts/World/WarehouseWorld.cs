@@ -1,188 +1,269 @@
+using System;
 using System.Collections.Generic;
+using Bidwarss.Domain;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
 namespace Bidwarss
 {
-    // One authoritative state ledger. Clients request actions, never assign item ownership.
-    // NetworkList provides snapshots for players joining an existing session.
     public sealed class WarehouseWorld : NetworkBehaviour
     {
         public static WarehouseWorld Instance { get; private set; }
         public ItemCatalog catalog;
-        public Material itemMaterial;
-        public Transform[] slots;
-        [Tooltip("Development samples only; this is not the final crate distribution.")]
-        public bool spawnTestItems = true;
-        public Transform[] testItemSpawns;
+        public Material itemMaterial, dustMaterial;
+        public Transform[] crates, itemOrigins, slots;
+        public Transform[] lids;
+        public TextMesh[] stackLabels;
+        [Range(1,30)] public int totalGroups = 12;
+        [Range(.5f,5)] public float openSeconds = 1.35f;
         public NetworkList<ItemState> Items;
-        readonly Dictionary<int, GameObject> views = new Dictionary<int, GameObject>();
-        readonly MaterialPropertyBlock tint = new MaterialPropertyBlock();
+        public NetworkList<CrateState> Crates;
+        public NetworkList<StackState> Stacks;
+        public readonly NetworkVariable<int> Seed = new NetworkVariable<int>();
+        public readonly NetworkVariable<int> SecuredDollars = new NetworkVariable<int>();
+        public readonly NetworkVariable<int> FinalDollars = new NetworkVariable<int>();
+        public readonly NetworkVariable<int> PlacedCount = new NetworkVariable<int>();
+        public readonly NetworkVariable<int> PeakPlayers = new NetworkVariable<int>();
+        public readonly NetworkVariable<double> StartedAt = new NetworkVariable<double>();
+        public readonly NetworkVariable<double> FinishedAt = new NetworkVariable<double>();
+        public readonly NetworkVariable<bool> Completed = new NetworkVariable<bool>();
+        public readonly NetworkVariable<FixedString64Bytes> RunId = new NetworkVariable<FixedString64Bytes>();
+        public readonly NetworkVariable<FixedString128Bytes> RulesHash = new NetworkVariable<FixedString128Bytes>();
+        public readonly NetworkVariable<FixedString512Bytes> TeamNames = new NetworkVariable<FixedString512Bytes>();
+        public RoundEngine Engine { get; private set; }
+        readonly Dictionary<int, ItemVisual> views = new Dictionary<int, ItemVisual>();
+        readonly Dictionary<ulong, string> roster = new Dictionary<ulong, string>();
+        double[] holdStarted;
+        bool[] knownOpen;
+        string viewedRun;
+        float nextHoldUpdate;
+        public GameRules Rules => catalog.CreateRules(crates.Length, totalGroups);
+        public double Elapsed => StartedAt.Value <= 0 ? 0 : Math.Max(0, (Completed.Value ? FinishedAt.Value : NetworkManager.ServerTime.Time) - StartedAt.Value);
+        public int OpenCount { get { int n=0; for(int i=0;i<Crates.Count;i++) if(Crates[i].opened)n++; return n; } }
 
-        void Awake() { Items = new NetworkList<ItemState>(); }
-
+        void Awake() { Items = new NetworkList<ItemState>(); Crates = new NetworkList<CrateState>(); Stacks = new NetworkList<StackState>(); }
         public override void OnNetworkSpawn()
         {
             Instance = this;
             if (IsServer)
             {
-                NetworkManager.OnClientDisconnectCallback += ReleaseDisconnectedPlayer;
-                if (spawnTestItems && catalog != null && catalog.entries != null && catalog.entries.Length > 0)
-                {
-                    for (int i = 0; i < testItemSpawns.Length; i++)
-                    {
-                        int type = i % catalog.entries.Length;
-                        Vector3 position = testItemSpawns[i].position;
-                        position.y = catalog.entries[type].size.y * .5f;
-                        Items.Add(new ItemState { id = i, kind = type, position = position,
-                            yaw = 0, holder = ItemState.Nobody, slot = -1 });
-                    }
-                }
+                NetworkManager.OnClientDisconnectCallback += Disconnected;
+                ServerStartRound(SessionMenu.RequestedSeed);
             }
+            RunId.OnValueChanged += RunChanged;
+            ResetPresentation();
         }
-
         public override void OnNetworkDespawn()
         {
-            if (NetworkManager != null)
-                NetworkManager.OnClientDisconnectCallback -= ReleaseDisconnectedPlayer;
-            foreach (var view in views.Values) if (view != null) Destroy(view);
-            views.Clear();
+            if (NetworkManager != null) NetworkManager.OnClientDisconnectCallback -= Disconnected;
+            RunId.OnValueChanged -= RunChanged;
+            ClearViews();
             if (Instance == this) Instance = null;
         }
-
-        public int HeldIndex(ulong client)
+        void RunChanged(FixedString64Bytes previous, FixedString64Bytes current) { ResetPresentation(); }
+        void ClearViews() { foreach(var v in views.Values) if(v != null) Destroy(v.gameObject); views.Clear(); }
+        void ResetPresentation()
         {
-            for (int i = 0; i < Items.Count; i++) if (Items[i].holder == client) return i;
-            return -1;
+            ClearViews(); viewedRun = RunId.Value.ToString(); knownOpen = new bool[Crates.Count];
+            // Existing opened crates at late join are snapshots, not new reveal events.
+            for(int i=0;i<Crates.Count;i++) knownOpen[i]=Crates[i].opened;
         }
-
-        public int PlacedCount
+        public void ServerStartRound(int seed)
         {
-            get { int n = 0; for (int i = 0; i < Items.Count; i++) if (Items[i].slot >= 0) n++; return n; }
+            if (!IsServer) return;
+            var rules = Rules; rules.Validate();
+            if(slots.Length < totalGroups || itemOrigins.Length != crates.Length || lids.Length != crates.Length)
+                throw new InvalidOperationException("Depo sahnesini Bidwarss menüsünden V2 için yeniden oluştur.");
+            Engine = new RoundEngine(rules, seed);
+            Completed.Value=false; StartedAt.Value=0; FinishedAt.Value=0; FinalDollars.Value=0;
+            SecuredDollars.Value=0; PlacedCount.Value=0; PeakPlayers.Value=0; Seed.Value=seed;
+            RulesHash.Value=Engine.RulesHash; TeamNames.Value=""; roster.Clear();
+            Items.Clear(); Crates.Clear(); Stacks.Clear();
+            holdStarted=new double[crates.Length];
+            for(int i=0;i<crates.Length;i++) Crates.Add(new CrateState { opener=ItemState.Nobody });
+            for(int i=0;i<Engine.StackCount;i++) Stacks.Add(new StackState { kind=Engine.StackKind(i) });
+            foreach(var item in Engine.Items) Items.Add(ToState(item, Vector3.zero));
+            foreach(var p in WarehousePlayer.Players.Values) p.ClearOpenIntent();
+            RunId.Value=Guid.NewGuid().ToString("N");
         }
-
+        public int HeldCount(ulong client, out int kind)
+        {
+            kind=-1; int n=0;
+            for(int i=0;i<Items.Count;i++) if(Items[i].holder==client && Items[i].location==ItemLocation.Held) { n++; kind=Items[i].kind; }
+            return n;
+        }
+        public int HeldValue(ulong client)
+        { int total=0; for(int i=0;i<Items.Count;i++) if(Items[i].holder==client) total+=Items[i].dollars; return total; }
         public string Hint(InteractionTarget target, ulong client)
         {
-            if (target == null) return "";
-            int held = HeldIndex(client);
-            if (target.kind == TargetKind.Crate)
-                return "Kasa icerigi sonraki asamada";
-            if (target.kind == TargetKind.Slot) return held >= 0 ? "E - Rafa yerlestir" : "Raf yeri";
-            if (target.id < 0 || target.id >= Items.Count) return "";
-            var item = Items[target.id];
-            return item.holder != ItemState.Nobody ? "Baska oyuncu tasiyor" :
-                held >= 0 ? "Once elindeki esyayi birak" : "E - Al: " + catalog.entries[item.kind].title;
+            if(Completed.Value) return "Depo tamamlandı! Sonuçlara TAB ile bak.";
+            if(target==null) return "Kutuyu aç • Eşyaları türüne göre 10'lu istifle";
+            int kind; int held=HeldCount(client,out kind);
+            if(target.kind==TargetKind.Crate)
+                return Crates[target.id].opened ? "Kutu boşaltıldı" : "E BASILI TUT • Kutuyu aç";
+            if(target.kind==TargetKind.Slot)
+            {
+                if(target.id>=Stacks.Count) return "";
+                var stack=Stacks[target.id];
+                return catalog.entries[stack.kind].title+" • "+stack.count+"/10"+(held>0 ? (kind==stack.kind ? " • E: İstifle" : " • Farklı eşya türü") : "");
+            }
+            if(target.id<0 || target.id>=Items.Count)return "";
+            var item=Items[target.id];
+            return "E: Al • "+catalog.entries[item.kind].title+" • "+GameRules.ConditionNames[(int)item.condition]+" • $"+item.dollars;
         }
-
-        public void Act(WarehousePlayer player, TargetKind kind, int id)
+        void Update()
         {
-            if (!IsServer || player == null) return;
-            ulong client = player.OwnerClientId;
-            int held = HeldIndex(client);
-            if (kind == TargetKind.Crate)
+            if(!IsSpawned || !IsServer || Engine==null || Completed.Value)return;
+            if(StartedAt.Value>0) TrackRoster();
+            if(Time.unscaledTime<nextHoldUpdate)return;
+            nextHoldUpdate=Time.unscaledTime+.05f;
+            for(int i=0;i<Crates.Count;i++)
             {
-                return; // No auction or crate-content system in the foundation milestone.
-            }
-            else if (kind == TargetKind.Item)
-            {
-                if (id < 0 || id >= Items.Count || held >= 0) return;
-                var item = Items[id];
-                if (item.holder != ItemState.Nobody || !CanReach(player, item.position)) return;
-                item.holder = client;
-                item.slot = -1;
-                Items[id] = item;
-            }
-            else if (kind == TargetKind.Slot)
-            {
-                if (id < 0 || id >= slots.Length || held < 0 || !CanReach(player, slots[id].position)) return;
-                for (int i = 0; i < Items.Count; i++) if (Items[i].slot == id) return;
-                var item = Items[held];
-                item.position = slots[id].position + Vector3.up * (.035f + catalog.entries[item.kind].size.y * .5f);
-                item.holder = ItemState.Nobody;
-                item.slot = id;
-                item.yaw = slots[id].eulerAngles.y;
-                Items[held] = item;
+                var state=Crates[i]; if(state.opened)continue;
+                WarehousePlayer owner=null;
+                if(state.opener!=ItemState.Nobody) WarehousePlayer.Players.TryGetValue(state.opener,out owner);
+                if(!ValidOpener(owner,i))
+                {
+                    state.opener=ItemState.Nobody; state.progress=0; holdStarted[i]=0;
+                    foreach(var candidate in WarehousePlayer.Players.Values)
+                        if(ValidOpener(candidate,i)) { owner=candidate; state.opener=owner.OwnerClientId; holdStarted[i]=NetworkManager.ServerTime.Time; break; }
+                }
+                if(state.opener!=ItemState.Nobody)
+                {
+                    if(StartedAt.Value<=0) { StartedAt.Value=NetworkManager.ServerTime.Time; TrackRoster(); }
+                    state.progress=Mathf.Clamp01((float)((NetworkManager.ServerTime.Time-holdStarted[i])/openSeconds));
+                    if(state.progress>=1)
+                    {
+                        string error;
+                        if(Engine.Open(i,out error))
+                        {
+                            state.opened=true; state.opener=ItemState.Nobody;
+                            foreach(var item in Engine.Items) if(item.crate==i) Items[item.id]=ToState(item,RevealPosition(item.id,i));
+                        }
+                    }
+                }
+                if(!state.Equals(Crates[i]))Crates[i]=state;
             }
         }
-
-        bool CanReach(WarehousePlayer player, Vector3 target)
+        bool ValidOpener(WarehousePlayer player,int crate)
         {
-            Vector3 origin = player.transform.position + Vector3.up * 1.5f;
-            Vector3 delta = target - origin;
-            if (delta.sqrMagnitude > 3.5f * 3.5f) return false;
-            // Block interacting through scenery, but ignore the player's own capsule.
-            foreach (var hit in Physics.RaycastAll(origin, delta.normalized, delta.magnitude, ~0, QueryTriggerInteraction.Ignore))
-            {
-                if (hit.collider.transform.IsChildOf(player.transform)) continue;
-                if (hit.collider.GetComponent<InteractionTarget>() != null) continue;
-                if (hit.distance < delta.magnitude - .15f) return false;
-            }
-            return true;
+            int kind;
+            return player!=null && player.WantsCrate==crate && player.InputFresh &&
+                Engine.HeldCount(player.OwnerClientId,out kind)==0 && player.ServerLooksAt(TargetKind.Crate,crate);
         }
-
+        void TrackRoster()
+        {
+            PeakPlayers.Value=Math.Max(PeakPlayers.Value,NetworkManager.ConnectedClients.Count);
+            foreach(var p in WarehousePlayer.Players.Values) roster[p.OwnerClientId]=p.PlayerName.Value.ToString();
+            var names=new List<string>(roster.Values); names.Sort(StringComparer.Ordinal);
+            // Cap departed-player history to fit the fixed network string and result UI.
+            if(names.Count>8)names.RemoveRange(8,names.Count-8);
+            TeamNames.Value=string.Join(" / ",names.ToArray());
+        }
+        Vector3 RevealPosition(int id,int crate)
+        {
+            int n=id/crates.Length;
+            return itemOrigins[crate].position+new Vector3((n%5)*.48f,.23f,(n/5)*.48f);
+        }
+        public Vector3 StackPosition(int stack,int index) => slots[stack].position+new Vector3((index%2-.5f)*.47f,.24f,(index/2-2)*.37f);
+        ItemState ToState(RoundItem item,Vector3 position)
+        {
+            bool sealedItem=item.location==ItemLocation.Sealed;
+            return new ItemState { id=item.id,kind=sealedItem?-1:item.kind,crate=item.crate,
+                condition=sealedItem?ItemCondition.Terrible:item.condition,dollars=sealedItem?0:item.dollars,
+                location=item.location,holder=item.holder,slot=item.stack,stackIndex=item.stackIndex,position=position };
+        }
+        void PublishProgress()
+        {
+            for(int i=0;i<Stacks.Count;i++) Stacks[i]=new StackState { kind=Engine.StackKind(i),count=Engine.StackCountAt(i) };
+            PlacedCount.Value=Engine.PlacedCount; SecuredDollars.Value=Engine.SecuredDollars;
+            if(Engine.Completed && !Completed.Value)
+            {
+                TrackRoster(); FinalDollars.Value=Engine.FinalDollars;
+                FinishedAt.Value=NetworkManager.ServerTime.Time; Completed.Value=true;
+            }
+        }
+        public void Act(WarehousePlayer player,TargetKind kind,int id)
+        {
+            if(!IsServer || Engine==null || Completed.Value || !player.ServerLooksAt(kind,id))return;
+            string error="";
+            if(kind==TargetKind.Item)
+            {
+                if(Engine.Take(id,player.OwnerClientId,out error))
+                { Items[id]=ToState(Engine.Items[id],Items[id].position); PublishProgress(); }
+            }
+            else if(kind==TargetKind.Slot)
+            {
+                if(Engine.Place(id,player.OwnerClientId,out error)>0)
+                {
+                    foreach(var item in Engine.Items) if(item.stack==id) Items[item.id]=ToState(item,StackPosition(id,item.stackIndex));
+                    PublishProgress();
+                }
+            }
+            if(!string.IsNullOrEmpty(error))player.Feedback(error);
+        }
         public void Drop(WarehousePlayer player)
         {
-            if (!IsServer) return;
-            int index = HeldIndex(player.OwnerClientId);
-            if (index < 0) return;
-            var item = Items[index];
-            Vector3 center = player.transform.position + player.transform.forward * 1.2f;
-            center.y = catalog.entries[item.kind].size.y * .5f + .02f;
-            Vector3 half = catalog.entries[item.kind].size * .49f;
-            // Prevent dropping into walls, other items or shelving. Keep holding on failure.
-            foreach (var collider in Physics.OverlapBox(center, half, Quaternion.identity, ~0, QueryTriggerInteraction.Ignore))
-                if (!collider.transform.IsChildOf(player.transform)) return;
-            item.position = center;
-            item.yaw = 0;
-            item.holder = ItemState.Nobody;
-            Items[index] = item;
+            if(!IsServer || Engine==null || Completed.Value)return;
+            int id=-1;
+            for(int i=0;i<Items.Count;i++)if(Items[i].holder==player.OwnerClientId)id=i;
+            if(id<0)return;
+            Vector3 center=player.transform.position+player.transform.forward*1.15f; center.y=.23f;
+            Physics.SyncTransforms();
+            foreach(var hit in Physics.OverlapBox(center,new Vector3(.22f,.2f,.22f),Quaternion.identity,~0,QueryTriggerInteraction.Ignore))
+                if(!hit.transform.IsChildOf(player.transform)) { player.Feedback("Önündeki alan dolu."); return; }
+            if(Engine.Drop(id,player.OwnerClientId)) Items[id]=ToState(Engine.Items[id],center);
         }
-
-        void ReleaseDisconnectedPlayer(ulong client)
+        void Disconnected(ulong client)
         {
-            if (!IsServer) return;
-            int index = HeldIndex(client);
-            if (index < 0) return;
-            var item = Items[index];
-            // Return to its last supported position. Reserve no shelf while carried.
-            item.holder = ItemState.Nobody;
-            item.slot = -1;
-            // Dedicated recovery strip at the entrance avoids colliding with a reused shelf slot.
-            item.position = new Vector3(-10f + (item.id % 30) * .67f,
-                catalog.entries[item.kind].size.y * .5f, -12f - (item.id / 30) * .7f);
-            item.yaw = 0;
-            Items[index] = item;
+            if(!IsServer || Engine==null)return;
+            var released=new List<int>();
+            foreach(var item in Engine.Items)if(item.holder==client)released.Add(item.id);
+            Engine.Disconnect(client);
+            foreach(int id in released)
+            {
+                // Unique recovery grid for every item, never inside a filled stack.
+                Vector3 pos=new Vector3(-12f+(id%40)*.6f,.23f,-13f-(id/40)*.46f);
+                Items[id]=ToState(Engine.Items[id],pos);
+            }
         }
-
         void LateUpdate()
         {
-            if (!IsSpawned) return;
-            for (int i = 0; i < Items.Count; i++)
+            if(!IsSpawned)return;
+            if(viewedRun!=RunId.Value.ToString() || knownOpen==null || knownOpen.Length!=Crates.Count)ResetPresentation();
+            for(int i=0;i<Crates.Count;i++)
             {
-                var item = Items[i];
-                if (!views.TryGetValue(item.id, out var view))
+                bool open=Crates[i].opened;
+                if(open && !knownOpen[i] && !Application.isBatchMode) RevealEffects.Play(crates[i].position+Vector3.up*.7f,dustMaterial);
+                knownOpen[i]=open;
+                if(lids[i]!=null)lids[i].localRotation=Quaternion.Slerp(lids[i].localRotation,Quaternion.Euler(open?-110:0,0,0),Time.deltaTime*9);
+            }
+            for(int i=0;i<slots.Length;i++)
+            {
+                slots[i].gameObject.SetActive(i<Stacks.Count);
+                if(i<Stacks.Count && stackLabels[i]!=null)
                 {
-                    view = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    view.name = catalog.entries[item.kind].title + " #" + item.id;
-                    view.transform.localScale = catalog.entries[item.kind].size;
-                    view.GetComponent<Renderer>().sharedMaterial = itemMaterial;
-                    tint.SetColor("_BaseColor", catalog.entries[item.kind].color);
-                    view.GetComponent<Renderer>().SetPropertyBlock(tint);
-                    var target = view.AddComponent<InteractionTarget>();
-                    target.kind = TargetKind.Item;
-                    target.id = item.id;
-                    views.Add(item.id, view);
+                    var s=Stacks[i]; stackLabels[i].text=catalog.entries[s.kind].title+"\n"+s.count+" / 10";
+                    stackLabels[i].color=s.count==10?new Color(.3f,1,.55f):Color.white;
                 }
-                Vector3 position = item.position;
-                Quaternion rotation = Quaternion.Euler(0, item.yaw, 0);
-                if (item.holder != ItemState.Nobody &&
-                    WarehousePlayer.Players.TryGetValue(item.holder, out var owner) && owner != null)
+            }
+            int carryIndex=0;
+            var carryIndices=new Dictionary<ulong,int>();
+            for(int i=0;i<Items.Count;i++)
+            {
+                var item=Items[i]; if(item.location==ItemLocation.Sealed)continue;
+                ItemVisual view;
+                if(!views.TryGetValue(item.id,out view))
+                { view=ItemVisual.Create(item,catalog.entries[item.kind],itemMaterial); views.Add(item.id,view); }
+                Vector3 pos=item.position; Quaternion rot=Quaternion.Euler(0,item.yaw,0);
+                if(item.location==ItemLocation.Held && WarehousePlayer.Players.TryGetValue(item.holder,out var owner))
                 {
-                    position = owner.transform.position + Vector3.up * 1.05f + owner.transform.forward * 1.0f;
-                    rotation = owner.transform.rotation;
+                    carryIndices.TryGetValue(item.holder,out carryIndex); carryIndices[item.holder]=carryIndex+1;
+                    pos=owner.transform.position+Vector3.up*(.73f+carryIndex*.065f)+owner.transform.forward*.9f+owner.transform.right*.32f;
+                    rot=owner.transform.rotation;
                 }
-                view.transform.SetPositionAndRotation(position, rotation);
-                view.GetComponent<Collider>().enabled = item.holder == ItemState.Nobody;
+                view.UpdateState(item,pos,rot);
             }
         }
     }

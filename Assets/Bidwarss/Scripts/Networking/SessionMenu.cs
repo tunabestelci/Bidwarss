@@ -1,6 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Net;
+using System.Text;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
@@ -10,119 +12,106 @@ namespace Bidwarss
 {
     public sealed class SessionMenu : MonoBehaviour
     {
+        [Serializable] sealed class JoinData { public int protocol=2; public string name; public string rules; }
+        public static SessionMenu Instance { get; private set; }
+        public static int RequestedSeed { get; private set; }
         public NetworkManager network;
+        public WarehouseWorld sceneWorld;
         public Camera lobbyCamera;
-        readonly Dictionary<ulong, int> seats = new Dictionary<ulong, int>();
-        string address = "127.0.0.1";
-        string status = "Ilk prototip - LAN / IP baglantisi";
-        bool restarting;
-        const ushort Port = 7777;
-
+        public string Address="127.0.0.1",DisplayName="Oyuncu",SeedText="";
+        public string Status {get;private set;}="Depo seni bekliyor.";
+        public bool Daily;
+        public bool Restarting {get;private set;}
+        readonly Dictionary<ulong,int> seats=new Dictionary<ulong,int>();
+        readonly Dictionary<ulong,string> names=new Dictionary<ulong,string>();
+        const ushort Port=7777;
+        static string lastStatus;
         void Awake()
         {
-            Application.runInBackground = true;
-            network.NetworkConfig.ConnectionApproval = true;
-            network.ConnectionApprovalCallback = Approve;
-            network.OnClientDisconnectCallback += Disconnected;
-            network.OnClientStopped += Stopped;
-            network.OnTransportFailure += TransportFailed;
+            Instance=this;Application.runInBackground=true;
+            DisplayName=PlayerPrefs.GetString("Bidwarss.Name","Oyuncu");
+            if(!string.IsNullOrEmpty(lastStatus)){Status=lastStatus;lastStatus=null;}
+            network.NetworkConfig.ConnectionApproval=true;network.NetworkConfig.ProtocolVersion=2;
+            network.ConnectionApprovalCallback=Approve;
+            network.OnClientDisconnectCallback+=Disconnected;network.OnClientStopped+=Stopped;network.OnTransportFailure+=TransportFailed;
         }
-
-        void Approve(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
+        void Start()
         {
-            // Reserve immediately so simultaneous connection requests cannot overbook four seats.
-            if (!seats.TryGetValue(request.ClientNetworkId, out int seat))
+            if(Application.isBatchMode && Array.IndexOf(Environment.GetCommandLineArgs(),"-bidwarssServer")>=0)
             {
-                seat = -1;
-                for (int i = 0; i < 4; i++) if (!seats.ContainsValue(i)) { seat = i; break; }
-                if (seat >= 0) seats.Add(request.ClientNetworkId, seat);
+                RequestedSeed=FreshSeed();
+                var transport=network.GetComponent<UnityTransport>();transport.SetConnectionData("127.0.0.1",Port,"0.0.0.0");
+                sceneWorld.Rules.Validate();network.StartServer();
             }
-            response.Approved = seat >= 0;
-            response.CreatePlayerObject = response.Approved;
-            response.Pending = false;
-            response.Reason = response.Approved ? "" : "Oda dolu (4 oyuncu).";
-            response.Position = new Vector3(-2.4f + Mathf.Max(0, seat) * 1.6f, .15f, -10);
-            response.Rotation = Quaternion.identity;
         }
-
+        public static int FreshSeed() => BitConverter.ToInt32(Guid.NewGuid().ToByteArray(),0);
+        public string NameFor(ulong client)=>names.TryGetValue(client,out var value)?value:"Oyuncu";
+        public static string CleanName(string value)
+        {
+            if(string.IsNullOrWhiteSpace(value))return "Oyuncu";
+            var result=new StringBuilder();
+            foreach(char c in value.Trim())if(!char.IsControl(c)&&c!='<'&&c!='>'&&c!='/'&&c!='\\'&&c!='|'&&result.Length<16)result.Append(c);
+            return result.Length>0?result.ToString():"Oyuncu";
+        }
+        void Approve(NetworkManager.ConnectionApprovalRequest request,NetworkManager.ConnectionApprovalResponse response)
+        {
+            response.Pending=false;response.Approved=false;response.CreatePlayerObject=false;
+            try
+            {
+                if(request.Payload==null || request.Payload.Length>1024)throw new Exception();
+                var data=JsonUtility.FromJson<JoinData>(Encoding.UTF8.GetString(request.Payload));
+                if(data==null || data.protocol!=2 || data.rules!=sceneWorld.Rules.Fingerprint())
+                {response.Reason="Oyun sürümü veya eşya kataloğu farklı. Aynı build ile bağlan.";return;}
+                int seat=-1;for(int i=0;i<4;i++)if(!seats.ContainsValue(i)){seat=i;break;}
+                if(seat<0){response.Reason="Oda dolu: en fazla 4 oyuncu.";return;}
+                seats[request.ClientNetworkId]=seat;names[request.ClientNetworkId]=CleanName(data.name);
+                response.Approved=true;response.CreatePlayerObject=true;
+                response.Position=new Vector3(-2.4f+seat*1.6f,.1f,-11);response.Rotation=Quaternion.identity;
+            }
+            catch(Exception){response.Reason="Bağlantı bilgisi okunamadı.";}
+        }
         void Disconnected(ulong client)
         {
-            seats.Remove(client);
-            if (!string.IsNullOrEmpty(network.DisconnectReason)) Debug.LogWarning(network.DisconnectReason);
+            seats.Remove(client);names.Remove(client);
+            if(client==network.LocalClientId && !string.IsNullOrEmpty(network.DisconnectReason))lastStatus=network.DisconnectReason;
         }
-
-        void TransportFailed() { status = "Baglanti baslatilamadi. Console'u kontrol et."; }
-        void Stopped(bool wasHost) { if (!restarting) StartCoroutine(ReturnToMenu()); }
-
+        void TransportFailed(){Status="Bağlantı kurulamadı; adres ve UDP 7777 erişimini kontrol et.";lastStatus=Status;}
+        void Stopped(bool wasHost){if(!Restarting && gameObject.activeInHierarchy)StartCoroutine(ReturnToMenu());}
         IEnumerator ReturnToMenu()
         {
-            restarting = true;
-            WarehousePlayer.LockCursor(false);
-            while (network != null && network.ShutdownInProgress) yield return null;
-            if (network != null) Destroy(network.gameObject);
-            yield return null;
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            Restarting=true;WarehousePlayer.LockCursor(false);
+            while(network!=null&&network.ShutdownInProgress)yield return null;
+            if(network!=null)Destroy(network.gameObject);
+            yield return null;SceneManager.LoadScene(SceneManager.GetActiveScene().path);
         }
-
-        void Update()
-        {
-            if (lobbyCamera != null) lobbyCamera.gameObject.SetActive(WarehousePlayer.Local == null);
-        }
-
+        void Update(){if(lobbyCamera!=null)lobbyCamera.gameObject.SetActive(WarehousePlayer.Local==null&&!Application.isBatchMode);}
         void OnDestroy()
         {
-            if (network == null) return;
-            network.OnClientDisconnectCallback -= Disconnected;
-            network.OnClientStopped -= Stopped;
-            network.OnTransportFailure -= TransportFailed;
+            if(Instance==this)Instance=null;
+            if(network==null)return;
+            network.OnClientDisconnectCallback-=Disconnected;network.OnClientStopped-=Stopped;network.OnTransportFailure-=TransportFailed;
         }
-
-        void StartSession(bool host)
+        public void StartSession(bool host)
         {
-            if (!IPAddress.TryParse(address, out var ip) || ip.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
-            { status = "Gecerli bir IPv4 adresi yaz (ornek: 192.168.1.10)."; return; }
-            var transport = network.GetComponent<UnityTransport>();
-            transport.SetConnectionData(address, Port, "0.0.0.0");
-            bool started = host ? network.StartHost() : network.StartClient();
-            status = started ? "Baglaniyor..." : "Baslatilamadi; port ve Console'u kontrol et.";
+            if(network.IsListening||Restarting)return;
+            if(!IPAddress.TryParse(Address,out var ip)||ip.AddressFamily!=System.Net.Sockets.AddressFamily.InterNetwork)
+            {Status="Geçerli IPv4 adresi yaz. Örnek: 192.168.1.10";return;}
+            try {sceneWorld.Rules.Validate();}
+            catch(Exception ex){Status=ex.Message;return;}
+            if(Daily)RequestedSeed=int.Parse(DateTime.UtcNow.ToString("yyyyMMdd"));
+            else if(string.IsNullOrWhiteSpace(SeedText))RequestedSeed=FreshSeed();
+            else if(int.TryParse(SeedText,out int seed))RequestedSeed=seed;
+            else {Status="Seed bir tam sayı olmalı.";return;}
+            DisplayName=CleanName(DisplayName);PlayerPrefs.SetString("Bidwarss.Name",DisplayName);PlayerPrefs.Save();
+            network.NetworkConfig.ConnectionData=Encoding.UTF8.GetBytes(JsonUtility.ToJson(new JoinData {name=DisplayName,rules=sceneWorld.Rules.Fingerprint()}));
+            network.GetComponent<UnityTransport>().SetConnectionData(Address,Port,"0.0.0.0");
+            Status=(host?network.StartHost():network.StartClient())?"Bağlanıyor…":"Oda açılamadı; Console'u kontrol et.";
         }
-
-        void OnGUI()
+        public void Leave(){if(network!=null&&!Restarting){lastStatus="Odadan ayrıldın.";network.Shutdown();}}
+        public void NewRound(bool sameSeed)
         {
-            if (network == null) return;
-            var world = WarehouseWorld.Instance;
-            if (network.IsListening && world != null)
-            {
-                GUI.Box(new Rect(20, 20, 310, 100), "BIDWARSS / DEPO");
-                GUI.Label(new Rect(35, 48, 290, 25), "Yerlesen test esyasi: " + world.PlacedCount + " / " + world.Items.Count);
-                GUI.Label(new Rect(35, 73, 290, 25), "WASD hareket | E al/yerlestir | Q birak");
-                if (world.Items.Count > 0 && world.PlacedCount == world.Items.Count)
-                    GUI.Box(new Rect(Screen.width / 2 - 150, 65, 300, 40), "TEST ESYALARI YERLESTIRILDI!");
-                if (WarehousePlayer.Local != null && Cursor.lockState == CursorLockMode.Locked)
-                {
-                    GUI.Label(new Rect(Screen.width / 2 - 4, Screen.height / 2 - 12, 20, 24), "+");
-                    GUI.Box(new Rect(Screen.width / 2 - 180, Screen.height - 85, 360, 32), WarehousePlayer.Local.CurrentHint);
-                    return;
-                }
-            }
-            GUILayout.BeginArea(new Rect(Screen.width / 2 - 180, Screen.height / 2 - 150, 360, 300), GUI.skin.box);
-            GUILayout.Label("BIDWARSS - CO-OP TEMEL PROTOTIP");
-            GUILayout.Space(15);
-            GUILayout.Label(status);
-            if (!network.IsListening && !restarting)
-            {
-                GUILayout.Label("Host IPv4 / port 7777");
-                address = GUILayout.TextField(address, 45);
-                if (GUILayout.Button("Oda kur (host)", GUILayout.Height(35))) StartSession(true);
-                if (GUILayout.Button("Odaya katil", GUILayout.Height(35))) StartSession(false);
-            }
-            else if (!restarting)
-            {
-                if (WarehousePlayer.Local != null && GUILayout.Button("Oyuna don", GUILayout.Height(35))) WarehousePlayer.LockCursor(true);
-                if (GUILayout.Button("Odadan ayril / Baglantiyi iptal et", GUILayout.Height(35))) network.Shutdown();
-            }
-            GUILayout.Label("Birlikte tasi, ana depoyu duzenle. Esyalar simdilik test kutulari.");
-            GUILayout.EndArea();
+            var world=WarehouseWorld.Instance;
+            if(world!=null && network.IsHost && world.Completed.Value)world.ServerStartRound(sameSeed?world.Seed.Value:FreshSeed());
         }
     }
 }

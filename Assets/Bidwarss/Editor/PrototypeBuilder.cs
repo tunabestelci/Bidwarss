@@ -6,24 +6,26 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace Bidwarss.Editor
 {
     public static class PrototypeBuilder
     {
-        const string Root = "Assets/Bidwarss/Generated";
+        const string Root = "Assets/Bidwarss/GeneratedV2";
 
-        [MenuItem("Bidwarss/Create Prototype Scene")]
+        [MenuItem("Bidwarss/Create Gameplay Scene")]
         public static void Build()
         {
             if (EditorApplication.isPlaying) { Debug.LogError("Exit Play Mode first."); return; }
             // Generated assets are intentionally never overwritten by rerunning this command.
             if (AssetDatabase.IsValidFolder(Root))
             {
-                EditorUtility.DisplayDialog("Bidwarss", "Generated klasoru zaten var. Var olan Warehouse sahnesini ac. Yeniden uretmek icin once klasoru yedekleyip kaldir.", "Tamam");
+                if (!Application.isBatchMode) EditorUtility.DisplayDialog("Bidwarss", "Generated klasoru zaten var. Var olan Warehouse sahnesini ac. Yeniden uretmek icin once klasoru yedekleyip kaldir.", "Tamam");
                 return;
             }
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             Directory.CreateDirectory(Root);
             AssetDatabase.Refresh();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -37,56 +39,66 @@ namespace Bidwarss.Editor
             var catalog = ScriptableObject.CreateInstance<ItemCatalog>();
             catalog.entries = new[]
             {
-                Entry("Test kutusu A", new Color(.9f, .3f, .2f), new Vector3(.4f, .2f, .35f)),
-                Entry("Test kutusu B", new Color(.3f, .8f, .35f), new Vector3(.3f, .4f, .3f)),
-                Entry("Test kutusu C", new Color(.95f, .75f, .2f), new Vector3(.42f, .3f, .25f))
+                Entry("mirror", "Ayna", 100, ItemCatalog.SampleShape.Mirror, new Color(.3f,.75f,.8f)),
+                Entry("table", "Masa", 100, ItemCatalog.SampleShape.Table, new Color(.76f,.5f,.24f)),
+                Entry("chair", "Sandalye", 60, ItemCatalog.SampleShape.Chair, new Color(.85f,.4f,.28f)),
+                Entry("radio", "Radyo", 120, ItemCatalog.SampleShape.Radio, new Color(.4f,.65f,.44f)),
+                Entry("lamp", "Lamba", 80, ItemCatalog.SampleShape.Lamp, new Color(.95f,.78f,.3f))
             };
             AssetDatabase.CreateAsset(catalog, Root + "/ItemCatalog.asset");
-
-            Cube("Depo zemini", new Vector3(0, -.15f, 0), new Vector3(24, .3f, 28), floor);
-            Cube("Sol duvar", new Vector3(-12, 2, 0), new Vector3(.3f, 4, 28), wall);
-            Cube("Sag duvar", new Vector3(12, 2, 0), new Vector3(.3f, 4, 28), wall);
-            Cube("Arka duvar", new Vector3(0, 2, 14), new Vector3(24, 4, .3f), wall);
-            Cube("Giris duvari", new Vector3(0, 2, -14), new Vector3(24, 4, .3f), wall);
-
+            if (GraphicsSettings.defaultRenderPipeline == null)
+            {
+                var pipeline = UniversalRenderPipelineAsset.Create();
+                AssetDatabase.CreateAsset(pipeline, Root + "/WarehousePipeline.asset");
+                // Create() supplies a renderer; persist it with the pipeline.
+                var serialized = new SerializedObject(pipeline);
+                var renderers = serialized.FindProperty("m_RendererDataList");
+                if (renderers != null)
+                    for (int i=0;i<renderers.arraySize;i++)
+                    {
+                        var renderer = renderers.GetArrayElementAtIndex(i).objectReferenceValue;
+                        if (renderer != null && !AssetDatabase.Contains(renderer)) AssetDatabase.AddObjectToAsset(renderer, pipeline);
+                    }
+                GraphicsSettings.defaultRenderPipeline = pipeline;
+                QualitySettings.renderPipeline = pipeline;
+            }
+            Cube("Depo zemini", new Vector3(0,-.15f,0), new Vector3(28,.3f,36), floor);
+            Cube("Sol duvar", new Vector3(-14,2,0), new Vector3(.3f,4,36), wall);
+            Cube("Sag duvar", new Vector3(14,2,0), new Vector3(.3f,4,36), wall);
+            Cube("Arka duvar", new Vector3(0,2,18), new Vector3(28,4,.3f), wall);
+            Cube("Giris duvari", new Vector3(0,2,-18), new Vector3(28,4,.3f), wall);
             var worldObject = new GameObject("Warehouse State", typeof(NetworkObject), typeof(WarehouseWorld));
             var world = worldObject.GetComponent<WarehouseWorld>();
-            world.catalog = catalog;
-            world.itemMaterial = itemMaterial;
-            world.testItemSpawns = new Transform[10];
-            for (int i = 0; i < 10; i++)
+            world.catalog=catalog; world.itemMaterial=itemMaterial;
+            world.dustMaterial=new Material(Shader.Find("Bidwarss/Dust"));
+            AssetDatabase.CreateAsset(world.dustMaterial,Root+"/Dust.mat");
+            world.crates=new Transform[10]; world.itemOrigins=new Transform[10]; world.lids=new Transform[10];
+            for(int i=0;i<10;i++)
             {
-                float side = i < 5 ? -1 : 1;
-                float z = -8 + (i % 5) * 4;
-                var box = Cube("Satin alinmis kasa " + (i + 1), new Vector3(side * 9.5f, .8f, z), new Vector3(2, 1.6f, 2.4f), crate);
-                Target(box, TargetKind.Crate, i);
-                var origin = new GameObject("Gecici test esyasi " + (i + 1)).transform;
-                origin.position = new Vector3(-3 + (i % 5) * 1.5f, 0, -6 + (i / 5) * 1.5f);
-                world.testItemSpawns[i] = origin;
-                Label("KASA " + (i + 1), box.transform.position + Vector3.up * 1.4f, .2f);
+                float side=i<5?-1:1, z=-9+(i%5)*4.5f;
+                var box=Cube("Kasa "+(i+1),new Vector3(side*11.5f,.65f,z),new Vector3(1.8f,1.3f,2.2f),crate);
+                Target(box,TargetKind.Crate,i); world.crates[i]=box.transform;
+                var hinge=new GameObject("Kapak mentese").transform;
+                hinge.position=new Vector3(side*11.5f,1.35f,z+1.1f);
+                var lid=Cube("Kapak",hinge.position+new Vector3(0,0,-1.1f),new Vector3(1.9f,.12f,2.25f),wood);
+                Object.DestroyImmediate(lid.GetComponent<Collider>());
+                lid.transform.SetParent(hinge,true); world.lids[i]=hinge;
+                var origin=new GameObject("Esya alani "+i).transform;
+                origin.position=new Vector3(side<0?-9.4f:7.4f,0,z-1.2f); world.itemOrigins[i]=origin;
+                Label("KASA "+(i+1),new Vector3(side*11.5f,2.2f,z),.15f);
             }
-            world.slots = new Transform[60];
-            for (int rack = 0; rack < 6; rack++)
+            world.slots=new Transform[12]; world.stackLabels=new TextMesh[12];
+            for(int i=0;i<12;i++)
             {
-                Vector3 center = new Vector3(-3.5f + (rack % 3) * 3.5f, 0, 3 + (rack / 3) * 5);
-                for (int level = 0; level < 2; level++)
-                {
-                    float y = .65f + level * .95f;
-                    Cube("Raf tahtasi", center + Vector3.up * y, new Vector3(2.8f, .12f, .9f), wood);
-                    for (int column = 0; column < 5; column++)
-                    {
-                        int id = rack * 10 + level * 5 + column;
-                        var slot = Cube("Raf yeri " + id, center + new Vector3(-1f + column * .5f, y + .085f, -.05f),
-                            new Vector3(.46f, .045f, .65f), marker);
-                        Target(slot, TargetKind.Slot, id);
-                        world.slots[id] = slot.transform;
-                    }
-                }
-                for (int side = -1; side <= 1; side += 2)
-                    Cube("Raf destek", center + new Vector3(side * 1.35f, 1, .32f), new Vector3(.12f, 2, .12f), wood);
+                var center=new Vector3(-5.4f+(i%4)*3.6f,0,-1+(i/4)*4);
+                var pallet=Cube("Istif "+i,center+Vector3.up*.08f,new Vector3(1.4f,.16f,2.3f),wood);
+                world.slots[i]=pallet.transform;
+                var button=Cube("Yerlestir "+i,center+new Vector3(0,.18f,-1.4f),new Vector3(1.4f,.25f,.35f),marker);
+                Target(button,TargetKind.Slot,i);
+                world.stackLabels[i]=Label("ISTIF",center+new Vector3(0,.65f,1.2f),.10f);
             }
-            Label("ANA DEPO", new Vector3(0, 3, 12), .5f);
-
+            Label("BIDWARSS / ANA DEPO",new Vector3(0,3,16),.25f);
+            Label("10 KASA   /   12 ISTIF   /   TEK EKIP",new Vector3(0,2.3f,16),.13f);
             var player = new GameObject("WarehousePlayer", typeof(NetworkObject), typeof(NetworkTransform));
             var controller = player.AddComponent<CharacterController>();
             controller.height = 1.8f;
@@ -121,6 +133,10 @@ namespace Bidwarss.Editor
             preview.GetComponent<Camera>().backgroundColor = new Color(.08f, .12f, .18f);
             var menu = new GameObject("Session Menu").AddComponent<SessionMenu>();
             menu.network = network;
+            menu.sceneWorld = world;
+            menu.gameObject.AddComponent<WarehouseHud>();
+            menu.gameObject.AddComponent<RunRecorder>();
+            menu.gameObject.AddComponent<LeaderboardClient>();
             menu.lobbyCamera = preview.GetComponent<Camera>();
             var sun = new GameObject("Light").AddComponent<Light>();
             sun.type = LightType.Directional;
@@ -134,11 +150,14 @@ namespace Bidwarss.Editor
             buildScenes.Insert(0, new EditorBuildSettingsScene(scenePath, true));
             EditorBuildSettings.scenes = buildScenes.ToArray();
             AssetDatabase.SaveAssets();
+            Debug.Log("Leaderboard rules hash: " + world.Rules.Fingerprint());
             Debug.Log("Bidwarss: Warehouse sahnesi hazir. Play > Oda kur. Client icin ayni sahnenin build'ini ac.");
         }
 
-        static ItemCatalog.Entry Entry(string title, Color color, Vector3 size) =>
-            new ItemCatalog.Entry { title = title, color = color, size = size };
+        public static void BuildBatch() => Build();
+
+        static ItemCatalog.Entry Entry(string key,string title,int dollars,ItemCatalog.SampleShape shape,Color color) =>
+            new ItemCatalog.Entry {key=key,title=title,baseDollars=dollars,sampleShape=shape,color=color};
 
         static Material MakeMaterial(string name, Color color)
         {
@@ -167,7 +186,7 @@ namespace Bidwarss.Editor
             target.id = id;
         }
 
-        static void Label(string text, Vector3 position, float size)
+        static TextMesh Label(string text, Vector3 position, float size)
         {
             var label = new GameObject(text).AddComponent<TextMesh>();
             label.text = text;
@@ -176,6 +195,7 @@ namespace Bidwarss.Editor
             label.fontSize = 48;
             label.characterSize = size;
             label.transform.position = position;
+            return label;
         }
     }
 }

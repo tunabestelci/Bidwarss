@@ -1,38 +1,16 @@
-# Doğrulama
+# V2 doğrulama
 
-Unity Editor ve C# derleyicisi bu ortamda bulunmuyor. **Unity derlemesi, shader derlemesi, Play Mode, PowerShell kurulum scripti ve gerçek multiplayer çalıştırılmadı.** Kaynak dosyaları C# sözdizimi ayrıştırıcısıyla; JSON/asmdef dosyaları JSON ayrıştırıcısıyla kontrol edilir. Bu, Unity API uyumluluğu veya oynanabilirlik testi değildir.
+Çalıştırılanlar: gerçek C# domain derlemesi ve 2.000 seed / 266.033 assertion; Python skor servisi 4 test grubu (imza, nonce tekrarı, süre aşımı, idempotent tekrar, veri sınırları, çakışma, ekip/seed filtreleri, sıralama ve gerçek HTTP GET).
 
-Önceki ZIP'teki rastgele dağıtım ve o dağıtıma ait testler kaldırıldı; çünkü kullanıcı bu sistemi şimdilik kapsam dışında bıraktı.
+Unity Editor bu ortamda yok; Unity assembly derlemesi, shader importu, scene üretimi, Windows PowerShell kurulumları ve aşağıdaki Play Mode testleri henüz yürütülmedi. Domain testleri Unity/co-op testlerinin yerine geçmez.
 
-## İlk import
-
-1. Unity 6 URP projesinde paket çözümlemesi ve C# derlemesi hatasız.
-2. Builder sahne, kayıtlı oyuncu prefabı, katalog, 10 kasa ve 60 raf yuvası üretir.
-3. Tekrar çalıştırmak mevcut Generated içeriğini değiştirmez.
-4. Shader pembe görünmez; nesnelerde üç tonlu renk görünür.
-5. Host başlatınca 10 sabit test kutusu oluşur. Kasaya E basmak rastgele eşya üretmez.
-6. Spawn Test Items kapalıyken hiç eşya oluşmaz; tamamlandı mesajı görünmez.
-
-## Host + client kabul listesi
-
-| Senaryo | Beklenen sonuç |
-|---|---|
-| Host aç, client katıl | Ayrı oyuncular ve aynı depo |
-| İki oyuncu aynı test eşyasını alsın | Yalnız biri taşır |
-| İki oyuncu aynı boş yuvaya yerleştirsin | Yalnız biri yerleşir, diğeri elde kalır |
-| Yerleşmiş eşya tekrar alınsın | Sayaç azalır, yuva serbest kalır |
-| Uzak veya duvar arkasındaki nesneye istek | Reddedilir |
-| Elde eşya varken ikinci eşya alınsın | Reddedilir |
-| Q ile boş zemine bırak | Her oyuncu aynı konumu görür |
-| Q ile duvara/rafa/eşyaya bırak | Eşya elde kalır |
-| Oyuncu taşırken bağlantısı kesilsin | Eşya girişteki kurtarma alanına döner |
-| Eşyalar yerleştikten sonra late join | Eşya konumları ve sayaç aynı |
-| Eşya taşınırken late join | Taşıyan oyuncu ve eşya görünür |
-| 4 oyuncudan sonra beşinci katılım | Reddedilir |
-| Client ayrılsın, yenisi katılsın | Boş koltuk yeniden kullanılır |
-| ESC menüde bekle | Hareket durur, imleç serbest |
-| Host ayrılsın | Client menüye döner |
-| Tekrar host kur | Temiz test düzeni, yeniden katılma mümkün |
-| Bütün test eşyaları yerleştirilsin | 10/10; test tamamlama mesajı |
-
-Client prediction, serbest fizik, kayıt/yükleme ve Steam/Relay yok. Açık artırma ise proje tasarımında yok; bir test eksiği değildir.
+1. Unity 6 URP projesinde kurulum; Console hatasız, Create Gameplay Scene sahneyi üretir. Tekrar üretme kendi asset'lerini silmez.
+2. Editor host + Windows build client. İki farklı isim, dört kişilik sınır, farklı katalog reddi. İkinci bağımsız bilgisayarda LAN tekrarı.
+3. Aynı kasaya iki oyuncu E tutar; tek açılış. Tuş bırakma, uzaklaşma, duvar arkasından deneme, pencere odağı kaybı açmayı keser.
+4. Aynı eşya için eşzamanlı E; tek sahip. En çok 10 aynı tür; farklı tür ve dolu palet reddedilir. Doğru paletin önündeki turkuaz işaretten yerleştirilir.
+5. İstifin son eşyasını geri almak sayaç/para değerini azaltır. Q dolu zemine bırakamaz. Eşya taşırken bağlantı kopması eşyaları giriş alanına bırakır.
+6. Ortasında katıl; açılmış kasalar ve taşınan/yerleşmiş eşyalar eşit görünür. Host ayrılınca menüye dönüş.
+7. 120 eşyanın tamamını yerleştir; sonuç bir kez oluşur, 7 durum tutarı toplam kazanca eşittir. Aynı seed yeniden başlatmada içerik aynı; yeni seed yeni içerik. Süre parayı azaltmaz.
+8. Sonuçtan yeni depoya geç; eski modeller, kapaklar, ilerleme, eldeki eşya temizlenir. Yerel kayıt oyunu kapatıp açınca kalır.
+9. Dünya servisi olmadan açık durum mesajı. HTTPS servis + dedicated server ile sonuç kaydı; oyuncu-host oda dünya kaydı göndermez. Servis kesilip açıldığında aynı tamamlanmış sonucun tekrarı çoğalmaz.
+10. Kendi görsel prefab'ını bağla, taşıma hücresine oturmasını ve collider'ların etkileşimi engellememesini kontrol et.

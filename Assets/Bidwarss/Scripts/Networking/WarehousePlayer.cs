@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Bidwarss.Domain;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -10,113 +12,123 @@ namespace Bidwarss
     {
         public Transform body;
         public static WarehousePlayer Local { get; private set; }
-        public static readonly Dictionary<ulong, WarehousePlayer> Players = new Dictionary<ulong, WarehousePlayer>();
+        public static readonly Dictionary<ulong,WarehousePlayer> Players=new Dictionary<ulong,WarehousePlayer>();
+        public readonly NetworkVariable<FixedString64Bytes> PlayerName=new NetworkVariable<FixedString64Bytes>();
         Camera eye;
         CharacterController motor;
         Vector2 serverMove;
-        float yaw, pitch, verticalSpeed, nextSend, lastInput, nextAction;
-        InteractionTarget looked;
+        float yaw,pitch,serverPitch,verticalSpeed,nextSend,lastInput,nextAction;
+        int wantedCrate=-1;
+        public int WantsCrate => wantedCrate;
+        public bool InputFresh => Time.unscaledTime-lastInput < .3f;
+        public InteractionTarget Looked { get; private set; }
         public string CurrentHint { get; private set; }
-
+        public string Toast { get; private set; }
+        public float ToastUntil { get; private set; }
+        public bool ResultsVisible { get; private set; }
+        bool seenCompleted;
+        string currentRun;
         public override void OnNetworkSpawn()
         {
-            Players[OwnerClientId] = this;
-            motor = GetComponent<CharacterController>();
-            motor.enabled = IsServer;
-            if (!IsOwner) return;
-            Local = this;
-            yaw = transform.eulerAngles.y;
-            body.gameObject.SetActive(false);
-            var cameraObject = new GameObject("Local camera", typeof(Camera), typeof(AudioListener));
-            cameraObject.transform.SetParent(transform, false);
-            cameraObject.transform.localPosition = Vector3.up * 1.55f;
-            eye = cameraObject.GetComponent<Camera>();
-            eye.nearClipPlane = .05f;
-            eye.fieldOfView = 78;
-            LockCursor(true);
+            Players[OwnerClientId]=this; motor=GetComponent<CharacterController>(); motor.enabled=IsServer;
+            if(IsServer)PlayerName.Value=SessionMenu.Instance!=null?SessionMenu.Instance.NameFor(OwnerClientId):"Oyuncu";
+            if(!IsOwner)return;
+            Local=this; yaw=transform.eulerAngles.y; body.gameObject.SetActive(false);
+            var go=new GameObject("Local camera",typeof(Camera),typeof(AudioListener));
+            go.transform.SetParent(transform,false); go.transform.localPosition=Vector3.up*1.55f;
+            eye=go.GetComponent<Camera>(); eye.nearClipPlane=.05f; eye.fieldOfView=78; LockCursor(true);
         }
-
         public override void OnNetworkDespawn()
         {
-            if (Players.TryGetValue(OwnerClientId, out var player) && player == this) Players.Remove(OwnerClientId);
-            if (Local == this) { Local = null; LockCursor(false); }
+            if(Players.TryGetValue(OwnerClientId,out var p) && p==this)Players.Remove(OwnerClientId);
+            if(Local==this){Local=null;LockCursor(false);}
         }
-
+        public void ClearOpenIntent(){wantedCrate=-1;serverMove=Vector2.zero;}
         public static void LockCursor(bool locked)
-        {
-            Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
-            Cursor.visible = !locked;
-        }
-
+        {Cursor.lockState=locked?CursorLockMode.Locked:CursorLockMode.None;Cursor.visible=!locked;}
+        public void CloseResults(){ResultsVisible=false;LockCursor(true);}
         void Update()
         {
-            if (!IsSpawned || !IsOwner || Keyboard.current == null || Mouse.current == null) return;
-            var keyboard = Keyboard.current;
-            if (keyboard.escapeKey.wasPressedThisFrame) LockCursor(Cursor.lockState != CursorLockMode.Locked);
-            bool active = Cursor.lockState == CursorLockMode.Locked;
-            Vector2 movement = Vector2.zero;
-            if (active)
+            if(!IsSpawned || !IsOwner || eye==null)return;
+            var world=WarehouseWorld.Instance;
+            if(world!=null && currentRun!=world.RunId.Value.ToString())
+            {currentRun=world.RunId.Value.ToString();seenCompleted=false;ResultsVisible=false;LockCursor(true);}
+            if(world!=null && world.Completed.Value && !seenCompleted)
+            {seenCompleted=true;ResultsVisible=true;LockCursor(false);RevealEffects.Celebrate();}
+            var keyboard=Keyboard.current;var mouse=Mouse.current;
+            if(keyboard==null || mouse==null)return;
+            if(keyboard.escapeKey.wasPressedThisFrame) {ResultsVisible=false;LockCursor(Cursor.lockState!=CursorLockMode.Locked);}
+            if(keyboard.tabKey.wasPressedThisFrame && world!=null && world.Completed.Value)
+            {ResultsVisible=!ResultsVisible;LockCursor(!ResultsVisible);}
+            bool active=Cursor.lockState==CursorLockMode.Locked && Application.isFocused;
+            Vector2 movement=Vector2.zero;
+            if(active)
             {
-                var delta = Mouse.current.delta.ReadValue();
-                yaw = Mathf.Repeat(yaw + delta.x * .12f, 360);
-                pitch = Mathf.Clamp(pitch - delta.y * .12f, -80, 80);
-                movement = new Vector2((keyboard.dKey.isPressed ? 1 : 0) - (keyboard.aKey.isPressed ? 1 : 0),
-                    (keyboard.wKey.isPressed ? 1 : 0) - (keyboard.sKey.isPressed ? 1 : 0));
+                var delta=mouse.delta.ReadValue();yaw=Mathf.Repeat(yaw+delta.x*.12f,360);pitch=Mathf.Clamp(pitch-delta.y*.12f,-80,80);
+                movement=new Vector2((keyboard.dKey.isPressed?1:0)-(keyboard.aKey.isPressed?1:0),(keyboard.wKey.isPressed?1:0)-(keyboard.sKey.isPressed?1:0));
             }
-            if (Time.unscaledTime >= nextSend)
+            eye.transform.rotation=Quaternion.Euler(pitch,yaw,0);
+            Looked=null;
+            if(active && Physics.Raycast(eye.transform.position,eye.transform.forward,out var hit,3.5f,~0,QueryTriggerInteraction.Ignore))
+                Looked=hit.collider.GetComponent<InteractionTarget>();
+            CurrentHint=world!=null?world.Hint(Looked,OwnerClientId):"";
+            int openTarget=active && keyboard.eKey.isPressed && Looked!=null && Looked.kind==TargetKind.Crate?Looked.id:-1;
+            if(Time.unscaledTime>=nextSend)
             {
-                nextSend = Time.unscaledTime + .05f;
-                MoveRpc(Vector2.ClampMagnitude(movement, 1), yaw);
+                nextSend=Time.unscaledTime+.05f;
+                InputRpc(Vector2.ClampMagnitude(movement,1),yaw,pitch,openTarget);
             }
-            looked = null;
-            if (active && Physics.Raycast(eye.transform.position, eye.transform.forward, out var hit, 3.5f,
-                    ~0, QueryTriggerInteraction.Ignore))
-                looked = hit.collider.GetComponent<InteractionTarget>();
-            var world = WarehouseWorld.Instance;
-            CurrentHint = world != null ? world.Hint(looked, OwnerClientId) : "";
-            if (active && keyboard.eKey.wasPressedThisFrame && looked != null) InteractRpc(looked.kind, looked.id);
-            if (active && keyboard.qKey.wasPressedThisFrame) DropRpc();
+            if(active && keyboard.eKey.wasPressedThisFrame && Looked!=null && Looked.kind!=TargetKind.Crate)
+                InteractRpc(Looked.kind,Looked.id,yaw,pitch);
+            if(active && keyboard.qKey.wasPressedThisFrame)DropRpc();
         }
-
-        void LateUpdate()
+        void LateUpdate(){if(IsOwner && eye!=null)eye.transform.rotation=Quaternion.Euler(pitch,yaw,0);}
+        [Rpc(SendTo.Server,InvokePermission=RpcInvokePermission.Owner,Delivery=RpcDelivery.Unreliable)]
+        void InputRpc(Vector2 movement,float heading,float vertical,int crate)
         {
-            if (IsOwner && eye != null) eye.transform.rotation = Quaternion.Euler(pitch, yaw, 0);
+            if(!Finite(movement.x)||!Finite(movement.y)||!Finite(heading)||!Finite(vertical))return;
+            serverMove=Vector2.ClampMagnitude(movement,1);transform.rotation=Quaternion.Euler(0,Mathf.Repeat(heading,360),0);
+            serverPitch=Mathf.Clamp(vertical,-80,80);wantedCrate=crate;lastInput=Time.unscaledTime;
         }
-
-        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner, Delivery = RpcDelivery.Unreliable)]
-        void MoveRpc(Vector2 movement, float heading)
+        [Rpc(SendTo.Server,InvokePermission=RpcInvokePermission.Owner)]
+        void InteractRpc(TargetKind kind,int id,float heading,float vertical)
         {
-            if (!Finite(movement.x) || !Finite(movement.y) || !Finite(heading)) return;
-            serverMove = Vector2.ClampMagnitude(movement, 1);
-            transform.rotation = Quaternion.Euler(0, Mathf.Repeat(heading, 360), 0);
-            lastInput = Time.unscaledTime;
+            if(Time.unscaledTime<nextAction||!Finite(heading)||!Finite(vertical))return;
+            nextAction=Time.unscaledTime+.10f;
+            transform.rotation=Quaternion.Euler(0,Mathf.Repeat(heading,360),0);serverPitch=Mathf.Clamp(vertical,-80,80);
+            WarehouseWorld.Instance?.Act(this,kind,id);
         }
-
-        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
-        void InteractRpc(TargetKind kind, int id)
-        {
-            if (Time.unscaledTime < nextAction) return;
-            nextAction = Time.unscaledTime + .12f;
-            WarehouseWorld.Instance?.Act(this, kind, id);
-        }
-
-        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+        [Rpc(SendTo.Server,InvokePermission=RpcInvokePermission.Owner)]
         void DropRpc()
+        {if(Time.unscaledTime<nextAction)return;nextAction=Time.unscaledTime+.1f;WarehouseWorld.Instance?.Drop(this);}
+        public void Feedback(string text){if(IsServer)FeedbackRpc(text);}
+        [Rpc(SendTo.Owner,InvokePermission=RpcInvokePermission.Server)]
+        void FeedbackRpc(string text){Toast=text;ToastUntil=Time.unscaledTime+2.5f;}
+        public bool ServerLooksAt(TargetKind kind,int id)
         {
-            if (Time.unscaledTime < nextAction) return;
-            nextAction = Time.unscaledTime + .12f;
-            WarehouseWorld.Instance?.Drop(this);
+            if(!IsServer)return false;
+            Vector3 origin=transform.position+Vector3.up*1.55f;
+            Vector3 direction=Quaternion.Euler(serverPitch,transform.eulerAngles.y,0)*Vector3.forward;
+            Physics.SyncTransforms();
+            var hits=Physics.RaycastAll(origin,direction,3.5f,~0,QueryTriggerInteraction.Ignore);
+            System.Array.Sort(hits,(a,b)=>a.distance.CompareTo(b.distance));
+            foreach(var hit in hits)
+            {
+                if(hit.transform.IsChildOf(transform))continue;
+                var target=hit.collider.GetComponent<InteractionTarget>();
+                return target!=null && target.kind==kind && target.id==id;
+            }
+            return false;
         }
-
-        static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
-
+        static bool Finite(float v)=>!float.IsNaN(v)&&!float.IsInfinity(v);
         void FixedUpdate()
         {
-            if (!IsSpawned || !IsServer) return;
-            Vector2 input = Time.unscaledTime - lastInput < .3f ? serverMove : Vector2.zero;
-            Vector3 direction = transform.right * input.x + transform.forward * input.y;
-            verticalSpeed = motor.isGrounded ? -2 : Mathf.Max(verticalSpeed - 20 * Time.fixedDeltaTime, -30);
-            motor.Move((direction * 4.5f + Vector3.up * verticalSpeed) * Time.fixedDeltaTime);
+            if(!IsSpawned||!IsServer)return;
+            Vector2 input=InputFresh?serverMove:Vector2.zero;
+            Vector3 direction=transform.right*input.x+transform.forward*input.y;
+            verticalSpeed=motor.isGrounded?-2:Mathf.Max(verticalSpeed-20*Time.fixedDeltaTime,-30);
+            motor.Move((direction*4.5f+Vector3.up*verticalSpeed)*Time.fixedDeltaTime);
+            if(transform.position.y < -5){motor.enabled=false;transform.position=new Vector3(0,.1f,-11);motor.enabled=true;}
         }
     }
 }

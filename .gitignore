@@ -17,3 +17,10 @@
 *.unityproj
 *.bidwarss-backup
 .DS_Store
+
+!Tests/DomainTests.csproj
+Tests/bin/
+Tests/obj/
+__pycache__/
+*.sqlite3*
+.bidwarss-backups/

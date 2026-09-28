@@ -1,6 +1,6 @@
 {
   "name": "Bidwarss.Runtime",
   "rootNamespace": "Bidwarss",
-  "references": ["Unity.Netcode.Runtime", "Unity.Networking.Transport", "Unity.InputSystem"],
+  "references": ["Bidwarss.Domain", "Unity.Netcode.Runtime", "Unity.Networking.Transport", "Unity.InputSystem", "Unity.Collections"],
   "autoReferenced": true
 }
