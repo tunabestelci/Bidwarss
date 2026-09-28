@@ -93,6 +93,7 @@ namespace Bidwarss.Editor
                 var center=new Vector3(-5.4f+(i%4)*3.6f,0,-1+(i/4)*4);
                 var pallet=Cube("Istif "+i,center+Vector3.up*.08f,new Vector3(1.4f,.16f,2.3f),wood);
                 world.slots[i]=pallet.transform;
+                Target(pallet,TargetKind.Slot,i);
                 var button=Cube("Yerlestir "+i,center+new Vector3(0,.18f,-1.4f),new Vector3(1.4f,.25f,.35f),marker);
                 Target(button,TargetKind.Slot,i);
                 world.stackLabels[i]=Label("ISTIF",center+new Vector3(0,.65f,1.2f),.10f);

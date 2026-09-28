@@ -86,3 +86,17 @@ python -m unittest discover -s LeaderboardServer -v
 ### Unity 6.5 EntityId / CS0619 hatasi
 
 Eski Netcode 2.7 paketi yeni EntityId API ile derlenmeyebilir. Bagimlilik tabani resmi Unity registry surumu 2.13.3 olarak guncellendi. Unity kapaliyken repoda `git pull --ff-only`, ardindan `Install-Bidwarss.ps1 -ProjectPath` ile mevcut projeyi guncelle. Kurucu manifesti yedekler, eski Netcode surumunu yukseltir ve daha yeni semantik surumu korur. Unity yeniden acilinca Package Manager paketleri cozer. `Library/PackageCache` icindeki kaynaklari elle degistirme. Bu paket guncellemesi Unity Editor ortaminda henuz derlenmedi.
+
+## Karakter ve ic mekan kurulumu
+
+Guncel kaynaklar, eski uretilmis sahnede de kapsul gorunumu yerine baretli depo calisani olusturur. Diger oyuncular yuruyus ve tasima pozunu gorur; yerel kamera iki is eldiveni gosterir. Bunlar rig gerektirmeyen gecici toon parcalardir, nihai karakter/animasyon assetleri degildir. Eski paletlerin tamami E etkilesimi kazanir; ahsap latalarla gorunur, yerlestirme ve esya yonu palet rotasyonunu takip eder.
+
+Kendi ic mekanin henuz bu repoda yoktur. Yeni editor menuleri:
+
+- **Bidwarss > Interior > Export Current Scene For Setup**: acik, kayitli sahneyi ve bagli varliklarini unitypackage olarak disa aktarir. Mekani birlikte duzenlemek icin bu dosyayi paylas.
+- **Create Playable Copy Of Current Scene**: once temel Warehouse sahnesi uretilmis olmali. Kendi mekan sahneni ac ve bu menuyu kullan; kaynak sahneyi koruyarak yeni Bidwarss_Playable sahnesine kasa, palet, kamera, oyuncu ve ag sistemlerini ekler. Prototip duvar/zeminini eklemez. **Mekanin geometrisini analiz edip otomatik yerlesim yapmaz.** Ornek konumlardaki kasa/paletleri, kapak menteselerini, esya cikis noktalarini ve tabelalari mekanina gore yerlestir.
+- **Add Mesh Colliders To Selection**: Hierarchy'de sabit mekan kokunu sec. Mevcut collider'lari koruyarak uygun mesh parcalarinda non-convex MeshCollider olusturur. Tek buyuk kutuyla kapi bosluklarini kapatmaz. Animator/Animation/Rigidbody/NetworkObject altindaki hareketli parcalar atlanir. Cam, dekor ve mevcut collider kalitesi ayrica kontrol edilmeli; undo desteklenir, sahneyi kaydet.
+
+Session Menu > Spawn Points alanina 4 bos Transform atayarak oyuncu giris noktalarini belirle. Warehouse State > Recovery Origin ayrilan oyuncularin esyalarinin birakilacagi bos alanin baslangicidir; grid saga 23.4 metre, geriye en cok 3.22 metre uzanabilir (300 esya sinirinda). Varsayilan 120 esyada 0.92 metre derinlik gerekir. Bu alan model duvarlarina gelmemeli. Q birakma zemini raycast ile bulur. Palet, crate origin, kamera ve spawn yerlesimi icin gercek model ile Play Mode kontrolu gerekir.
+
+Bu eklemede C# sozdizimi kontrolu ve mevcut domain testleri gecti; Unity derlemesi ve goruntu/animasyon dogrulamasi bu ortamda yapilmadi.

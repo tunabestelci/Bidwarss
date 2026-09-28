@@ -32,10 +32,22 @@ namespace Bidwarss
         {
             Players[OwnerClientId]=this; motor=GetComponent<CharacterController>(); motor.enabled=IsServer;
             if(IsServer)PlayerName.Value=SessionMenu.Instance!=null?SessionMenu.Instance.NameFor(OwnerClientId):"Oyuncu";
+            // Replace the original capsule visually; the CharacterController remains the sole body collider.
+            Material avatarMaterial=null;
+            if(body!=null)
+            {
+                var renderer=body.GetComponentInChildren<Renderer>();
+                if(renderer!=null)avatarMaterial=renderer.sharedMaterial;
+                if(body!=null)body.gameObject.SetActive(false);
+            }
+            var avatar=new GameObject("Warehouse worker");avatar.transform.SetParent(transform,false);
+            avatar.AddComponent<WarehouseAvatar>().Initialize(this,avatarMaterial);
+            avatar.SetActive(!IsOwner);
             if(!IsOwner)return;
-            Local=this; yaw=transform.eulerAngles.y; body.gameObject.SetActive(false);
+            Local=this; yaw=transform.eulerAngles.y; if(body!=null)body.gameObject.SetActive(false);
             var go=new GameObject("Local camera",typeof(Camera),typeof(AudioListener));
             go.transform.SetParent(transform,false); go.transform.localPosition=Vector3.up*1.55f;
+            go.AddComponent<WarehouseHands>().Initialize(this,avatarMaterial);
             eye=go.GetComponent<Camera>(); eye.nearClipPlane=.05f; eye.fieldOfView=78; LockCursor(true);
         }
         public override void OnNetworkDespawn()
@@ -70,7 +82,7 @@ namespace Bidwarss
             eye.transform.rotation=Quaternion.Euler(pitch,yaw,0);
             Looked=null;
             if(active && Physics.Raycast(eye.transform.position,eye.transform.forward,out var hit,3.5f,~0,QueryTriggerInteraction.Ignore))
-                Looked=hit.collider.GetComponent<InteractionTarget>();
+                Looked=hit.collider.GetComponentInParent<InteractionTarget>();
             CurrentHint=world!=null?world.Hint(Looked,OwnerClientId):"";
             int openTarget=active && keyboard.eKey.isPressed && Looked!=null && Looked.kind==TargetKind.Crate?Looked.id:-1;
             if(Time.unscaledTime>=nextSend)
@@ -115,7 +127,7 @@ namespace Bidwarss
             foreach(var hit in hits)
             {
                 if(hit.transform.IsChildOf(transform))continue;
-                var target=hit.collider.GetComponent<InteractionTarget>();
+                var target=hit.collider.GetComponentInParent<InteractionTarget>();
                 return target!=null && target.kind==kind && target.id==id;
             }
             return false;
@@ -128,7 +140,7 @@ namespace Bidwarss
             Vector3 direction=transform.right*input.x+transform.forward*input.y;
             verticalSpeed=motor.isGrounded?-2:Mathf.Max(verticalSpeed-20*Time.fixedDeltaTime,-30);
             motor.Move((direction*4.5f+Vector3.up*verticalSpeed)*Time.fixedDeltaTime);
-            if(transform.position.y < -5){motor.enabled=false;transform.position=new Vector3(0,.1f,-11);motor.enabled=true;}
+            if(transform.position.y < -5){motor.enabled=false;transform.position=SessionMenu.Instance!=null?SessionMenu.Instance.SpawnPosition((int)(OwnerClientId%4)):new Vector3(0,.1f,-11);motor.enabled=true;}
         }
     }
 }

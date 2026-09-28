@@ -13,6 +13,7 @@ namespace Bidwarss
         public ItemCatalog catalog;
         public Material itemMaterial, dustMaterial;
         public Transform[] crates, itemOrigins, slots;
+        public Transform recoveryOrigin;
         public Transform[] lids;
         public TextMesh[] stackLabels;
         [Range(1,30)] public int totalGroups = 12;
@@ -46,6 +47,9 @@ namespace Bidwarss
         public override void OnNetworkSpawn()
         {
             Instance = this;
+            for(int i=0;i<slots.Length;i++)
+                if(slots[i]!=null && slots[i].GetComponent<PalletVisual>()==null && slots[i].GetComponent<MeshRenderer>()!=null && slots[i].name.StartsWith("Istif "))
+                    slots[i].gameObject.AddComponent<PalletVisual>();
             if (IsServer)
             {
                 NetworkManager.OnClientDisconnectCallback += Disconnected;
@@ -166,7 +170,8 @@ namespace Bidwarss
             int n=id/crates.Length;
             return itemOrigins[crate].position+new Vector3((n%5)*.48f,.23f,(n/5)*.48f);
         }
-        public Vector3 StackPosition(int stack,int index) => slots[stack].position+new Vector3((index%2-.5f)*.47f,.24f,(index/2-2)*.37f);
+        // Two rows of five objects. Rotation follows the pallet, independently of its model scale.
+        public Vector3 StackPosition(int stack,int index) => slots[stack].position+slots[stack].rotation*new Vector3((index%2-.5f)*.47f,.30f,(index/2-2)*.40f);
         ItemState ToState(RoundItem item,Vector3 position)
         {
             bool sealedItem=item.location==ItemLocation.Sealed;
@@ -209,7 +214,10 @@ namespace Bidwarss
             int id=-1;
             for(int i=0;i<Items.Count;i++)if(Items[i].holder==player.OwnerClientId)id=i;
             if(id<0)return;
-            Vector3 center=player.transform.position+player.transform.forward*1.15f; center.y=.23f;
+            Vector3 center=player.transform.position+player.transform.forward*1.15f;
+            if(!Physics.Raycast(center+Vector3.up*.8f,Vector3.down,out var floor,2.5f,~0,QueryTriggerInteraction.Ignore))
+            {player.Feedback("Burada esyayi birakacak zemin yok.");return;}
+            center=floor.point+Vector3.up*.23f;
             Physics.SyncTransforms();
             foreach(var hit in Physics.OverlapBox(center,new Vector3(.22f,.2f,.22f),Quaternion.identity,~0,QueryTriggerInteraction.Ignore))
                 if(!hit.transform.IsChildOf(player.transform)) { player.Feedback("Önündeki alan dolu."); return; }
@@ -224,13 +232,19 @@ namespace Bidwarss
             foreach(int id in released)
             {
                 // Unique recovery grid for every item, never inside a filled stack.
-                Vector3 pos=new Vector3(-12f+(id%40)*.6f,.23f,-13f-(id/40)*.46f);
+                Vector3 pos=recoveryOrigin!=null
+                    ?recoveryOrigin.position+recoveryOrigin.rotation*new Vector3((id%40)*.6f,.23f,-(id/40)*.46f)
+                    :new Vector3(-12f+(id%40)*.6f,.23f,-13f-(id/40)*.46f);
                 Items[id]=ToState(Engine.Items[id],pos);
             }
         }
         void LateUpdate()
         {
             if(!IsSpawned)return;
+            // Older generated scenes gain a usable target on the entire pallet without regeneration.
+            for(int i=0;i<slots.Length;i++)
+                if(slots[i]!=null && slots[i].GetComponent<InteractionTarget>()==null)
+                {var target=slots[i].gameObject.AddComponent<InteractionTarget>();target.kind=TargetKind.Slot;target.id=i;}
             if(viewedRun!=RunId.Value.ToString() || knownOpen==null || knownOpen.Length!=Crates.Count)ResetPresentation();
             for(int i=0;i<Crates.Count;i++)
             {
@@ -256,7 +270,7 @@ namespace Bidwarss
                 ItemVisual view;
                 if(!views.TryGetValue(item.id,out view))
                 { view=ItemVisual.Create(item,catalog.entries[item.kind],itemMaterial); views.Add(item.id,view); }
-                Vector3 pos=item.position; Quaternion rot=Quaternion.Euler(0,item.yaw,0);
+                Vector3 pos=item.position; Quaternion rot=item.location==ItemLocation.Stacked && item.slot>=0 ? slots[item.slot].rotation : Quaternion.Euler(0,item.yaw,0);
                 if(item.location==ItemLocation.Held && WarehousePlayer.Players.TryGetValue(item.holder,out var owner))
                 {
                     carryIndices.TryGetValue(item.holder,out carryIndex); carryIndices[item.holder]=carryIndex+1;

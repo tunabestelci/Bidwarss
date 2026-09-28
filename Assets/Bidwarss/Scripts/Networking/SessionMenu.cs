@@ -18,6 +18,14 @@ namespace Bidwarss
         public NetworkManager network;
         public WarehouseWorld sceneWorld;
         public Camera lobbyCamera;
+        [Tooltip("Optional four spawn markers in your interior scene. Empty uses prototype positions.")]
+        public Transform[] spawnPoints;
+        public Vector3 SpawnPosition(int seat)
+        {
+            if(spawnPoints!=null&&spawnPoints.Length>0&&spawnPoints[seat%spawnPoints.Length]!=null)
+                return spawnPoints[seat%spawnPoints.Length].position;
+            return new Vector3(-2.4f+seat*1.6f,.1f,-11);
+        }
         public string Address="127.0.0.1",DisplayName="Oyuncu",SeedText="";
         public string Status {get;private set;}="Depo seni bekliyor.";
         public bool Daily;
@@ -66,7 +74,8 @@ namespace Bidwarss
                 if(seat<0){response.Reason="Oda dolu: en fazla 4 oyuncu.";return;}
                 seats[request.ClientNetworkId]=seat;names[request.ClientNetworkId]=CleanName(data.name);
                 response.Approved=true;response.CreatePlayerObject=true;
-                response.Position=new Vector3(-2.4f+seat*1.6f,.1f,-11);response.Rotation=Quaternion.identity;
+                response.Position=SpawnPosition(seat);
+                response.Rotation=spawnPoints!=null&&spawnPoints.Length>0&&spawnPoints[seat%spawnPoints.Length]!=null?spawnPoints[seat%spawnPoints.Length].rotation:Quaternion.identity;
             }
             catch(Exception){response.Reason="Bağlantı bilgisi okunamadı.";}
         }
