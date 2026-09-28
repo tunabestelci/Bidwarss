@@ -64,7 +64,7 @@ Warehouse State üzerindeki `totalGroups` toplam eşya sayısını 10'lu gruplar
 
 ## Co-op
 
-Unity Netcode for GameObjects 2.7+, Unity Transport, host/server otoritesi. Sahne durumunu sunucu üretir; istemci yalnızca hareket ve etkileşim niyeti gönderir. Sunucu mesafe/bakış/engel, sahiplik, istif türü ve kapasitesini doğrular. Geç katılan oyuncu güncel durumu alır; ayrılan oyuncunun eşyaları girişteki kurtarma alanına bırakılır.
+Unity Netcode for GameObjects 2.13.3+, Unity Transport, host/server otoritesi. Sahne durumunu sunucu üretir; istemci yalnızca hareket ve etkileşim niyeti gönderir. Sunucu mesafe/bakış/engel, sahiplik, istif türü ve kapasitesini doğrular. Geç katılan oyuncu güncel durumu alır; ayrılan oyuncunun eşyaları girişteki kurtarma alanına bırakılır.
 
 Editor + ayrı Windows build ile test et. Aynı PC'de `127.0.0.1`, aynı ağda host'un IPv4 adresi. UDP 7777 kullanılır. İnternette doğrudan bağlantı için ağın buna izin vermesi gerekir. Relay/Steam daveti, otomatik NAT geçişi, host devri ve yarım kalmış depo kaydı bu sürümde yok. Host ayrılırsa oturum biter. Hareket sunucu otoritelidir; yüksek gecikmede istemci tahmini henüz yok. Herkes aynı paket sürümleri ve kataloğu kullanmalı; kural hash'i farklıysa bağlantı reddedilir.
 
@@ -82,3 +82,7 @@ python -m unittest discover -s LeaderboardServer -v
 ```
 
 2.000 seed üzerinde 266.033 C# kontrolü geçti. Skor servisinin kimlik doğrulama, tekrar gönderim, çakışma, sıralama, filtreleme ve HTTP okuma testleri geçti. Bu çalışma ortamında Unity Editor bulunmadığından Unity derleme/Play Mode ve iki gerçek istemcili oturum henüz çalıştırılmadı. [Manuel kontrol listesi](Documentation/VALIDATION.md).
+
+### Unity 6.5 EntityId / CS0619 hatasi
+
+Eski Netcode 2.7 paketi yeni EntityId API ile derlenmeyebilir. Bagimlilik tabani resmi Unity registry surumu 2.13.3 olarak guncellendi. Unity kapaliyken repoda `git pull --ff-only`, ardindan `Install-Bidwarss.ps1 -ProjectPath` ile mevcut projeyi guncelle. Kurucu manifesti yedekler, eski Netcode surumunu yukseltir ve daha yeni semantik surumu korur. Unity yeniden acilinca Package Manager paketleri cozer. `Library/PackageCache` icindeki kaynaklari elle degistirme. Bu paket guncellemesi Unity Editor ortaminda henuz derlenmedi.
