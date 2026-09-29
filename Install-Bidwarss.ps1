@@ -44,5 +44,23 @@ foreach ($folder in @('Bidwarss','DepoLevel')) {
     $folderMeta = Join-Path $project ('Assets/' + $folder + '.meta')
     if (!(Test-Path $folderMeta)) { Copy-Item (Join-Path $PSScriptRoot ('Assets/' + $folder + '.meta')) $folderMeta }
 }
+# ZIP imports can create Assets/Assets/DepoLevel alongside the installed copy.
+# Keep imported art in place; quarantine only duplicate source files after the
+# canonical installation has completed successfully. Nothing is deleted.
+$duplicateScripts = Join-Path $project 'Assets/Assets/DepoLevel/Scripts'
+$canonicalScripts = Join-Path $project 'Assets/DepoLevel/Scripts'
+if (Test-Path $duplicateScripts) {
+    foreach ($file in Get-ChildItem $duplicateScripts -Filter '*.cs' -File -Recurse) {
+        $relative = $file.FullName.Substring($duplicateScripts.Length).TrimStart([char]'\', [char]'/')
+        if (!(Test-Path (Join-Path $canonicalScripts $relative))) { continue }
+        $destination = Join-Path $backup ('DuplicateDepoScripts/' + $relative)
+        New-Item (Split-Path $destination -Parent) -ItemType Directory -Force | Out-Null
+        Move-Item $file.FullName $destination
+        if (Test-Path ($file.FullName + '.meta')) {
+            Move-Item ($file.FullName + '.meta') ($destination + '.meta')
+        }
+        Write-Host "Cift script yedeklendi: $relative"
+    }
+}
 Write-Host "Kuruldu. Yedek: $backup"
 Write-Host 'Unity: Bidwarss > Build Uploaded Depot (Co-op). Mevcut sahnelerin korunur.'
