@@ -76,8 +76,9 @@ namespace Bidwarss
             var r=go.GetComponent<Renderer>();r.sharedMaterial=mat;
             var block=new MaterialPropertyBlock();block.SetColor("_BaseColor",color);r.SetPropertyBlock(block);
         }
-        public void UpdateState(ItemState state,Vector3 position,Quaternion rotation)
+        public void UpdateState(ItemState state,Vector3 position,Quaternion rotation,float scale=1)
         {
+            transform.localScale=Vector3.one*scale;
             bool held=state.location==ItemLocation.Held;
             hitbox.enabled=!held;
             bool snap=!positioned||previous!=state.location||!held;

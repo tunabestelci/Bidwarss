@@ -1,0 +1,6 @@
+{
+  "name": "DepoLevel.Runtime",
+  "references": [
+    "Unity.InputSystem"
+  ]
+}

@@ -14,6 +14,7 @@ namespace Bidwarss
         public Material itemMaterial, dustMaterial;
         public Transform[] crates, itemOrigins, slots;
         public Transform recoveryOrigin;
+        public int recoveryColumns=40;
         public Transform[] lids;
         public TextMesh[] stackLabels;
         [Range(1,30)] public int totalGroups = 12;
@@ -88,7 +89,7 @@ namespace Bidwarss
             for(int i=0;i<crates.Length;i++) Crates.Add(new CrateState { opener=ItemState.Nobody });
             for(int i=0;i<Engine.StackCount;i++) Stacks.Add(new StackState { kind=Engine.StackKind(i) });
             foreach(var item in Engine.Items) Items.Add(ToState(item, Vector3.zero));
-            foreach(var p in WarehousePlayer.Players.Values) p.ClearOpenIntent();
+            foreach(var p in WarehousePlayer.Players.Values) p.ServerResetForRound();
             RunId.Value=Guid.NewGuid().ToString("N");
         }
         public int HeldCount(ulong client, out int kind)
@@ -142,7 +143,7 @@ namespace Bidwarss
                         string error;
                         if(Engine.Open(i,out error))
                         {
-                            state.opened=true; state.opener=ItemState.Nobody;
+                            state.opened=true; state.openedAt=NetworkManager.ServerTime.Time; state.opener=ItemState.Nobody;
                             foreach(var item in Engine.Items) if(item.crate==i) Items[item.id]=ToState(item,RevealPosition(item.id,i));
                         }
                     }
@@ -168,10 +169,16 @@ namespace Bidwarss
         Vector3 RevealPosition(int id,int crate)
         {
             int n=id/crates.Length;
-            return itemOrigins[crate].position+new Vector3((n%5)*.48f,.23f,(n/5)*.48f);
+            return itemOrigins[crate].position+itemOrigins[crate].rotation*new Vector3((n%5)*.48f,.23f,(n/5)*.48f);
         }
         // Two rows of five objects. Rotation follows the pallet, independently of its model scale.
-        public Vector3 StackPosition(int stack,int index) => slots[stack].position+slots[stack].rotation*new Vector3((index%2-.5f)*.47f,.30f,(index/2-2)*.40f);
+        public Vector3 StackPosition(int stack,int index)
+        {
+            var layout=slots[stack].GetComponent<StackLayout>();
+            return layout!=null?layout.Center(index):slots[stack].position+slots[stack].rotation*new Vector3((index%2-.5f)*.47f,.30f,(index/2-2)*.40f);
+        }
+        Quaternion StackRotation(int stack,int index)
+        {var layout=slots[stack].GetComponent<StackLayout>();return layout!=null?layout.Rotation(index):slots[stack].rotation;}
         ItemState ToState(RoundItem item,Vector3 position)
         {
             bool sealedItem=item.location==ItemLocation.Sealed;
@@ -233,7 +240,7 @@ namespace Bidwarss
             {
                 // Unique recovery grid for every item, never inside a filled stack.
                 Vector3 pos=recoveryOrigin!=null
-                    ?recoveryOrigin.position+recoveryOrigin.rotation*new Vector3((id%40)*.6f,.23f,-(id/40)*.46f)
+                    ?recoveryOrigin.position+recoveryOrigin.rotation*new Vector3((id%Math.Max(1,recoveryColumns))*.6f,.23f,-(id/Math.Max(1,recoveryColumns))*.46f)
                     :new Vector3(-12f+(id%40)*.6f,.23f,-13f-(id/40)*.46f);
                 Items[id]=ToState(Engine.Items[id],pos);
             }
@@ -270,14 +277,14 @@ namespace Bidwarss
                 ItemVisual view;
                 if(!views.TryGetValue(item.id,out view))
                 { view=ItemVisual.Create(item,catalog.entries[item.kind],itemMaterial); views.Add(item.id,view); }
-                Vector3 pos=item.position; Quaternion rot=item.location==ItemLocation.Stacked && item.slot>=0 ? slots[item.slot].rotation : Quaternion.Euler(0,item.yaw,0);
+                Vector3 pos=item.position; Quaternion rot=item.location==ItemLocation.Stacked && item.slot>=0 ? StackRotation(item.slot,item.stackIndex) : Quaternion.Euler(0,item.yaw,0);
                 if(item.location==ItemLocation.Held && WarehousePlayer.Players.TryGetValue(item.holder,out var owner))
                 {
                     carryIndices.TryGetValue(item.holder,out carryIndex); carryIndices[item.holder]=carryIndex+1;
                     pos=owner.transform.position+Vector3.up*(.73f+carryIndex*.065f)+owner.transform.forward*.9f+owner.transform.right*.32f;
                     rot=owner.transform.rotation;
                 }
-                view.UpdateState(item,pos,rot);
+                view.UpdateState(item,pos,rot,item.location==ItemLocation.Stacked&&slots[item.slot].GetComponent<StackLayout>()!=null?.85f:1);
             }
         }
     }

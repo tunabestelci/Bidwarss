@@ -12,7 +12,7 @@ namespace Bidwarss
 {
     public sealed class SessionMenu : MonoBehaviour
     {
-        [Serializable] sealed class JoinData { public int protocol=2; public string name; public string rules; }
+        [Serializable] sealed class JoinData { public int protocol=3; public string name; public string rules; }
         public static SessionMenu Instance { get; private set; }
         public static int RequestedSeed { get; private set; }
         public NetworkManager network;
@@ -39,7 +39,7 @@ namespace Bidwarss
             Instance=this;Application.runInBackground=true;
             DisplayName=PlayerPrefs.GetString("Bidwarss.Name","Oyuncu");
             if(!string.IsNullOrEmpty(lastStatus)){Status=lastStatus;lastStatus=null;}
-            network.NetworkConfig.ConnectionApproval=true;network.NetworkConfig.ProtocolVersion=2;
+            network.NetworkConfig.ConnectionApproval=true;network.NetworkConfig.ProtocolVersion=3;
             network.ConnectionApprovalCallback=Approve;
             network.OnClientDisconnectCallback+=Disconnected;network.OnClientStopped+=Stopped;network.OnTransportFailure+=TransportFailed;
         }
@@ -53,6 +53,7 @@ namespace Bidwarss
             }
         }
         public static int FreshSeed() => BitConverter.ToInt32(Guid.NewGuid().ToByteArray(),0);
+        public int SeatFor(ulong client)=>seats.TryGetValue(client,out var seat)?seat:0;
         public string NameFor(ulong client)=>names.TryGetValue(client,out var value)?value:"Oyuncu";
         public static string CleanName(string value)
         {
@@ -68,7 +69,7 @@ namespace Bidwarss
             {
                 if(request.Payload==null || request.Payload.Length>1024)throw new Exception();
                 var data=JsonUtility.FromJson<JoinData>(Encoding.UTF8.GetString(request.Payload));
-                if(data==null || data.protocol!=2 || data.rules!=sceneWorld.Rules.Fingerprint())
+                if(data==null || data.protocol!=3 || data.rules!=sceneWorld.Rules.Fingerprint())
                 {response.Reason="Oyun sürümü veya eşya kataloğu farklı. Aynı build ile bağlan.";return;}
                 int seat=-1;for(int i=0;i<4;i++)if(!seats.ContainsValue(i)){seat=i;break;}
                 if(seat<0){response.Reason="Oda dolu: en fazla 4 oyuncu.";return;}

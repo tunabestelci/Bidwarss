@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Bidwarss.Domain;
 using Unity.Collections;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -55,6 +56,16 @@ namespace Bidwarss
             if(Players.TryGetValue(OwnerClientId,out var p) && p==this)Players.Remove(OwnerClientId);
             if(Local==this){Local=null;LockCursor(false);}
         }
+        public void ServerResetForRound()
+        {
+            if(!IsServer || SessionMenu.Instance==null)return;
+            int seat=SessionMenu.Instance.SeatFor(OwnerClientId);var position=SessionMenu.Instance.SpawnPosition(seat);
+            motor.enabled=false;
+            GetComponent<NetworkTransform>().Teleport(position,Quaternion.identity,transform.localScale);
+            motor.enabled=true;verticalSpeed=0;lastInput=-1;ClearOpenIntent();ResetViewRpc();
+        }
+        [Rpc(SendTo.Owner,InvokePermission=RpcInvokePermission.Server)]
+        void ResetViewRpc(){yaw=0;pitch=0;}
         public void ClearOpenIntent(){wantedCrate=-1;serverMove=Vector2.zero;}
         public static void LockCursor(bool locked)
         {Cursor.lockState=locked?CursorLockMode.Locked:CursorLockMode.None;Cursor.visible=!locked;}
@@ -140,7 +151,7 @@ namespace Bidwarss
             Vector3 direction=transform.right*input.x+transform.forward*input.y;
             verticalSpeed=motor.isGrounded?-2:Mathf.Max(verticalSpeed-20*Time.fixedDeltaTime,-30);
             motor.Move((direction*4.5f+Vector3.up*verticalSpeed)*Time.fixedDeltaTime);
-            if(transform.position.y < -5){motor.enabled=false;transform.position=SessionMenu.Instance!=null?SessionMenu.Instance.SpawnPosition((int)(OwnerClientId%4)):new Vector3(0,.1f,-11);motor.enabled=true;}
+            if(transform.position.y < -5){motor.enabled=false;transform.position=SessionMenu.Instance!=null?SessionMenu.Instance.SpawnPosition(SessionMenu.Instance.SeatFor(OwnerClientId)):new Vector3(0,.1f,-11);motor.enabled=true;}
         }
     }
 }

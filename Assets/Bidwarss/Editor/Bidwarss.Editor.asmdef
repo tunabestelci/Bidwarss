@@ -1,6 +1,16 @@
 {
   "name": "Bidwarss.Editor",
   "rootNamespace": "Bidwarss.Editor",
-  "references": ["Bidwarss.Domain", "Bidwarss.Runtime", "Unity.Netcode.Runtime", "Unity.Networking.Transport", "Unity.RenderPipelines.Universal.Runtime"],
-  "includePlatforms": ["Editor"]
+  "references": [
+    "Bidwarss.Domain",
+    "Bidwarss.Runtime",
+    "Unity.Netcode.Runtime",
+    "Unity.Networking.Transport",
+    "Unity.RenderPipelines.Universal.Runtime",
+    "DepoLevel.Runtime",
+    "DepoLevel.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
 }

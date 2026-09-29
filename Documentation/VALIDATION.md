@@ -14,3 +14,9 @@ Unity Editor bu ortamda yok; Unity assembly derlemesi, shader importu, scene ür
 8. Sonuçtan yeni depoya geç; eski modeller, kapaklar, ilerleme, eldeki eşya temizlenir. Yerel kayıt oyunu kapatıp açınca kalır.
 9. Dünya servisi olmadan açık durum mesajı. HTTPS servis + dedicated server ile sonuç kaydı; oyuncu-host oda dünya kaydı göndermez. Servis kesilip açıldığında aynı tamamlanmış sonucun tekrarı çoğalmaz.
 10. Kendi görsel prefab'ını bağla, taşıma hücresine oturmasını ve collider'ların etkileşimi engellememesini kontrol et.
+
+## DepoLevel entegrasyonu
+
+Bes geometri testi gecti: dugum kimlikleri/sayilari, 4 spawn ve merkez koridor, konteyner basina en cok 30 esya cikisi, 12 raf/120 hucre ve yaklasma alanlari, 300 esyalik kurtarma gridi. AABB verisi kullanir; Unity fizik motorunun yerine gecmez.
+
+Unity'de Build Uploaded Depot (Co-op) sonrasi: giris zemini ve kapilardan yurume; her konteyneri E ile acma; iki kanadin koridora cikmamasi; acilmis kapiya gec katilim; 120 esyayi gercek raf hucrelerine yerlestirme; yeni run kapilari kapatirken oyuncularin konteyner icinde kalmamasi; dogru sahnenin client build'inde acilmasi; shaderlar/dokular/TMP'siz yazi ve FPS olcumu.

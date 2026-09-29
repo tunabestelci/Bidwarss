@@ -1,0 +1,9 @@
+{
+  "name": "DepoLevel.Editor",
+  "references": [
+    "DepoLevel.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

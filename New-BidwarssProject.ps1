@@ -1,4 +1,4 @@
-param([string]$ProjectPath='D:\UnityProjects\Bidwarss', [string]$EditorPath, [string]$UrpVersion)
+param([string]$ProjectPath='C:\UnityProjects\Bidwarss', [string]$EditorPath, [string]$UrpVersion)
 $ErrorActionPreference='Stop'
 if (!$EditorPath) {
     $editors = @(Get-ChildItem "$env:ProgramFiles\Unity\Hub\Editor\6000.*\Editor\Unity.exe" -ErrorAction SilentlyContinue)
@@ -27,6 +27,6 @@ $manifest.dependencies | Add-Member -NotePropertyName 'com.unity.render-pipeline
 [IO.File]::WriteAllText($path,($manifest | ConvertTo-Json -Depth 30),(New-Object System.Text.UTF8Encoding($false)))
 & (Join-Path $PSScriptRoot 'Install-Bidwarss.ps1') -ProjectPath $ProjectPath
 $log=Join-Path $parent 'bidwarss-build-scene.log'
-$process = Start-Process $EditorPath -ArgumentList @("-batchmode", "-quit", "-projectPath", ('"'+$ProjectPath+'"'), "-executeMethod", "Bidwarss.Editor.PrototypeBuilder.BuildBatch", "-logFile", ('"'+$log+'"')) -Wait -PassThru
+$process = Start-Process $EditorPath -ArgumentList @("-batchmode", "-quit", "-projectPath", ('"'+$ProjectPath+'"'), "-executeMethod", "Bidwarss.Editor.DepoGameplayBuilder.Build", "-logFile", ('"'+$log+'"')) -Wait -PassThru
 if ($process.ExitCode -ne 0) { throw "Sahne olusturulamadi. Log: $log. Projeyi Unity'de acip Console'u kontrol et." }
 Start-Process $EditorPath -ArgumentList @('-projectPath', ('"'+$ProjectPath+'"'))
