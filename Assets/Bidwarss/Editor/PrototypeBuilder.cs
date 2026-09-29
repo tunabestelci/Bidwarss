@@ -126,6 +126,7 @@ namespace Bidwarss.Editor
             var prefabList = ScriptableObject.CreateInstance<NetworkPrefabsList>();
             prefabList.Add(new NetworkPrefab { Prefab = prefab });
             AssetDatabase.CreateAsset(prefabList, Root + "/NetworkPrefabs.asset");
+            network.NetworkConfig.Prefabs.NetworkPrefabsLists.Clear();
             network.NetworkConfig.Prefabs.NetworkPrefabsLists.Add(prefabList);
 
             var preview = new GameObject("Lobby Camera", typeof(Camera), typeof(AudioListener));

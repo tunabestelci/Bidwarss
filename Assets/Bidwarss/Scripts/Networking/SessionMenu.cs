@@ -10,6 +10,7 @@ using UnityEngine.SceneManagement;
 
 namespace Bidwarss
 {
+    [DefaultExecutionOrder(-20000)]
     public sealed class SessionMenu : MonoBehaviour
     {
         [Serializable] sealed class JoinData { public int protocol=3; public string name; public string rules; }
@@ -35,14 +36,45 @@ namespace Bidwarss
         const ushort Port=7777;
         static string lastStatus;
         bool starting;
+        NetworkPrefabsList runtimePrefabs;
         void Awake()
         {
             Instance=this;Application.runInBackground=true;
+            RemoveDuplicatePrefabRegistrations();
             DisplayName=PlayerPrefs.GetString("Bidwarss.Name","Oyuncu");
             if(!string.IsNullOrEmpty(lastStatus)){Status=lastStatus;lastStatus=null;}
             network.NetworkConfig.ConnectionApproval=true;network.NetworkConfig.ProtocolVersion=3;
             network.ConnectionApprovalCallback=Approve;
             network.OnClientDisconnectCallback+=Disconnected;network.OnClientStopped+=Stopped;network.OnTransportFailure+=TransportFailed;
+        }
+        void RemoveDuplicatePrefabRegistrations()
+        {
+            if(network==null||network.NetworkConfig==null)return;
+            var lists=network.NetworkConfig.Prefabs.NetworkPrefabsLists;
+            var unique=new List<NetworkPrefab>();
+            var seen=new Dictionary<uint,NetworkPrefab>();
+            int duplicates=0;
+            foreach(var list in lists)
+            {
+                if(list==null)continue;
+                foreach(var entry in list.PrefabList)
+                {
+                    if(entry==null)continue;
+                    uint hash=entry.SourcePrefabGlobalObjectIdHash;
+                    if(seen.TryGetValue(hash,out var previous)&&previous.Equals(entry))
+                    {duplicates++;continue;}
+                    // Distinct overrides or hash collisions require an explicit authoring fix.
+                    if(!seen.ContainsKey(hash))seen.Add(hash,entry);
+                    unique.Add(entry);
+                }
+            }
+            if(duplicates==0)return;
+            // Use a private runtime list; never mutate shared project assets.
+            runtimePrefabs=ScriptableObject.CreateInstance<NetworkPrefabsList>();
+            runtimePrefabs.name="Bidwarss unique session prefabs";
+            foreach(var entry in unique)runtimePrefabs.Add(entry);
+            lists.Clear();lists.Add(runtimePrefabs);
+            Debug.Log("Bidwarss: "+duplicates+" yinelenen prefab kaydı birleştirildi.");
         }
         void Start()
         {
