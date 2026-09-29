@@ -111,7 +111,7 @@ namespace Bidwarss.Editor
         static TextMesh Label(string text,Transform parent,Vector3 local,float size)
         {
             var t=Marker(text,parent,local);var label=t.gameObject.AddComponent<TextMesh>();label.text=text;
-            label.font=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");label.GetComponent<Renderer>().sharedMaterial=label.font.material;
+            label.font=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");label.GetComponent<Renderer>().sharedMaterial=DepoLevelBuilder.WorldTextMaterial(label.font);
             label.anchor=TextAnchor.MiddleCenter;label.alignment=TextAlignment.Center;label.fontSize=64;label.characterSize=size;label.color=Color.white;return label;
         }
     }

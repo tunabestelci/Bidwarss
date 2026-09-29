@@ -503,6 +503,24 @@ namespace DepoLevel.EditorTools
             if (legacyFont == null) { try { legacyFont = Resources.GetBuiltinResource<Font>("Arial.ttf"); } catch { } }
         }
 
+        public static Material WorldTextMaterial(Font font)
+        {
+            const string path = "Assets/DepoLevel/Materials/WorldText.mat";
+            EnsureFolder("Assets/DepoLevel/Materials");
+            var shader = Shader.Find("Bidwarss/WorldText");
+            if (shader == null) throw new InvalidOperationException("WorldText shader bulunamadi; kurulumu tekrar calistir.");
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, path);
+            }
+            material.shader = shader;
+            material.mainTexture = font.material.mainTexture;
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
         static Type FindType(string fullName)
         {
             foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
@@ -578,7 +596,7 @@ namespace DepoLevel.EditorTools
                 float byWidth = n.sx > 0f ? n.sx / (6.4f * 0.62f * Mathf.Max(1, tm.text.Length)) : byHeight;
                 tm.characterSize = Mathf.Min(byHeight, byWidth);
                 var mr = go.GetComponent<MeshRenderer>();
-                mr.sharedMaterial = legacyFont.material;
+                mr.sharedMaterial = WorldTextMaterial(legacyFont);
                 mr.shadowCastingMode = ShadowCastingMode.Off;
             }
             statLabel++;
