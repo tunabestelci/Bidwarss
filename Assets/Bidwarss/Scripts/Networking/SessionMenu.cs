@@ -34,6 +34,7 @@ namespace Bidwarss
         readonly Dictionary<ulong,string> names=new Dictionary<ulong,string>();
         const ushort Port=7777;
         static string lastStatus;
+        bool starting;
         void Awake()
         {
             Instance=this;Application.runInBackground=true;
@@ -103,8 +104,55 @@ namespace Bidwarss
         }
         public void StartSession(bool host)
         {
-            if(network.IsListening||Restarting)return;
-            if(!IPAddress.TryParse(Address,out var ip)||ip.AddressFamily!=System.Net.Sockets.AddressFamily.InterNetwork)
+            if(starting||Restarting||(network!=null&&network.IsListening))return;
+            starting=true;
+            Status="Oda hazırlanıyor…";
+            StartCoroutine(StartSessionRoutine(host));
+        }
+        IEnumerator StartSessionRoutine(bool host)
+        {
+            // Leave the IMGUI event before creating network objects and the player camera.
+            yield return null;
+            try { BeginSession(host); }
+            catch(Exception ex)
+            {
+                Status="Başlatma hatası: "+ex.Message;
+                Debug.LogException(ex);
+                lastStatus=Status;
+                if(network!=null&&network.IsListening)network.Shutdown();
+            }
+            if(network!=null&&network.IsListening)
+            {
+                float deadline=Time.realtimeSinceStartup+20f;
+                while(network!=null&&network.IsListening&&!Restarting&&Time.realtimeSinceStartup<deadline)
+                {
+                    if(WarehousePlayer.Local!=null&&WarehouseWorld.Instance!=null)
+                    {Status="Depo hazır.";starting=false;yield break;}
+                    yield return null;
+                }
+                if(network!=null&&network.IsListening&&!Restarting)
+                {
+                    Status=WarehousePlayer.Local==null
+                        ? "Oyuncu oluşturulamadı. Console'daki ilk kırmızı hatayı paylaş."
+                        : "Depo ağ üzerinde başlatılamadı. Bidwarss menüsünden depo sahnesini yeniden oluştur.";
+                    Debug.LogError(Status);lastStatus=Status;network.Shutdown();
+                }
+            }
+            starting=false;
+        }
+        void BeginSession(bool host)
+        {
+            if(network==null)throw new InvalidOperationException("NetworkManager bağlantısı eksik.");
+            if(sceneWorld==null||sceneWorld.catalog==null)throw new InvalidOperationException("Depo veya eşya kataloğu bağlantısı eksik.");
+            var transport=network.GetComponent<UnityTransport>();
+            if(transport==null)throw new InvalidOperationException("UnityTransport eksik.");
+            network.NetworkConfig.NetworkTransport=transport;
+            var prefab=network.NetworkConfig.PlayerPrefab;
+            if(prefab==null||prefab.GetComponent<NetworkObject>()==null||prefab.GetComponent<WarehousePlayer>()==null)
+                throw new InvalidOperationException("Oyuncu prefabı eksik veya geçersiz. Bidwarss > Build Uploaded Depot (Co-op) çalıştır.");
+            if(sceneWorld.slots==null||sceneWorld.slots.Length<sceneWorld.totalGroups||sceneWorld.crates==null||sceneWorld.itemOrigins==null||sceneWorld.itemOrigins.Length!=sceneWorld.crates.Length||sceneWorld.lids==null||sceneWorld.lids.Length!=sceneWorld.crates.Length)
+                throw new InvalidOperationException("Depo sahne bağlantıları eksik. Bidwarss > Build Uploaded Depot (Co-op) çalıştır.");
+            if(!host&&(!IPAddress.TryParse(Address,out var ip)||ip.AddressFamily!=System.Net.Sockets.AddressFamily.InterNetwork))
             {Status="Geçerli IPv4 adresi yaz. Örnek: 192.168.1.10";return;}
             try {sceneWorld.Rules.Validate();}
             catch(Exception ex){Status=ex.Message;return;}
@@ -114,7 +162,7 @@ namespace Bidwarss
             else {Status="Seed bir tam sayı olmalı.";return;}
             DisplayName=CleanName(DisplayName);PlayerPrefs.SetString("Bidwarss.Name",DisplayName);PlayerPrefs.Save();
             network.NetworkConfig.ConnectionData=Encoding.UTF8.GetBytes(JsonUtility.ToJson(new JoinData {name=DisplayName,rules=sceneWorld.Rules.Fingerprint()}));
-            network.GetComponent<UnityTransport>().SetConnectionData(Address,Port,"0.0.0.0");
+            transport.SetConnectionData(host?"127.0.0.1":Address,Port,"0.0.0.0");
             Status=(host?network.StartHost():network.StartClient())?"Bağlanıyor…":"Oda açılamadı; Console'u kontrol et.";
         }
         public void Leave(){if(network!=null&&!Restarting){lastStatus="Odadan ayrıldın.";network.Shutdown();}}
