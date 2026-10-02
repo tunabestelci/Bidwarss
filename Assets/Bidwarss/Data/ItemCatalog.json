@@ -1,0 +1,1239 @@
+{
+ "version": 2,
+ "conditions": [
+  {
+   "name": "Rezalet",
+   "weight": 8
+  },
+  {
+   "name": "Çok kötü",
+   "weight": 14
+  },
+  {
+   "name": "Kötü",
+   "weight": 20
+  },
+  {
+   "name": "Orta",
+   "weight": 27
+  },
+  {
+   "name": "İyi",
+   "weight": 18
+  },
+  {
+   "name": "Çok iyi",
+   "weight": 10
+  },
+  {
+   "name": "Efsane",
+   "weight": 3
+  }
+ ],
+ "items": [
+  {
+   "key": "ahsap-duvar-saati",
+   "title": "Eski ahşap duvar saati",
+   "baseDollars": 150,
+   "collector": 4,
+   "selectionWeight": 6,
+   "maxGroups": 3,
+   "color": "#a3763a",
+   "shape": "Box",
+   "minDollars": [
+    33,
+    57,
+    93,
+    130,
+    190,
+    330,
+    1320
+   ],
+   "maxDollars": [
+    39,
+    69,
+    115,
+    170,
+    260,
+    495,
+    2190
+   ]
+  },
+  {
+   "key": "model-motosiklet",
+   "title": "Model spor motosiklet",
+   "baseDollars": 35,
+   "collector": 2,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#c5463c",
+   "shape": "Box",
+   "minDollars": [
+    7,
+    13,
+    21,
+    30,
+    44,
+    71,
+    210
+   ],
+   "maxDollars": [
+    9,
+    15,
+    27,
+    40,
+    61,
+    105,
+    350
+   ]
+  },
+  {
+   "key": "basit-saat",
+   "title": "Basit masa saati",
+   "baseDollars": 18,
+   "collector": 0,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#a3763a",
+   "shape": "Box",
+   "minDollars": [
+    3,
+    6,
+    11,
+    16,
+    23,
+    34,
+    74
+   ],
+   "maxDollars": [
+    4,
+    8,
+    13,
+    20,
+    31,
+    51,
+    125
+   ]
+  },
+  {
+   "key": "vintage-masa",
+   "title": "Vintage ahşap masa",
+   "baseDollars": 350,
+   "collector": 4,
+   "selectionWeight": 6,
+   "maxGroups": 3,
+   "color": "#8a5a2b",
+   "shape": "Table",
+   "minDollars": [
+    76,
+    135,
+    220,
+    305,
+    440,
+    770,
+    3070
+   ],
+   "maxDollars": [
+    91,
+    160,
+    270,
+    395,
+    605,
+    1150,
+    5120
+   ]
+  },
+  {
+   "key": "zil-buzdolabi",
+   "title": "ZIL buzdolabı (Sovyet)",
+   "baseDollars": 250,
+   "collector": 4,
+   "selectionWeight": 6,
+   "maxGroups": 3,
+   "color": "#b0b7bf",
+   "shape": "Box",
+   "minDollars": [
+    54,
+    95,
+    155,
+    220,
+    315,
+    550,
+    2190
+   ],
+   "maxDollars": [
+    65,
+    115,
+    195,
+    285,
+    435,
+    825,
+    3660
+   ]
+  },
+  {
+   "key": "antika-biber-degirmeni",
+   "title": "Antika biber değirmeni",
+   "baseDollars": 90,
+   "collector": 4,
+   "selectionWeight": 6,
+   "maxGroups": 3,
+   "color": "#b0b7bf",
+   "shape": "Box",
+   "minDollars": [
+    20,
+    34,
+    56,
+    78,
+    115,
+    195,
+    790
+   ],
+   "maxDollars": [
+    23,
+    41,
+    70,
+    100,
+    155,
+    295,
+    1320
+   ]
+  },
+  {
+   "key": "tekerlek",
+   "title": "Tekerlek",
+   "baseDollars": 20,
+   "collector": 0,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#6a7a52",
+   "shape": "Box",
+   "minDollars": [
+    4,
+    7,
+    12,
+    17,
+    25,
+    37,
+    82
+   ],
+   "maxDollars": [
+    5,
+    8,
+    15,
+    23,
+    35,
+    56,
+    135
+   ]
+  },
+  {
+   "key": "retro-bisiklet",
+   "title": "Retro bisiklet",
+   "baseDollars": 220,
+   "collector": 3,
+   "selectionWeight": 6,
+   "maxGroups": 3,
+   "color": "#4a5b6e",
+   "shape": "Box",
+   "minDollars": [
+    46,
+    82,
+    135,
+    190,
+    275,
+    465,
+    1600
+   ],
+   "maxDollars": [
+    56,
+    99,
+    170,
+    250,
+    380,
+    695,
+    2660
+   ]
+  },
+  {
+   "key": "brezilya-romu",
+   "title": "Brezilya romu (şişe)",
+   "baseDollars": 35,
+   "collector": 1,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#7b4a1e",
+   "shape": "Box",
+   "minDollars": [
+    7,
+    13,
+    21,
+    30,
+    44,
+    68,
+    175
+   ],
+   "maxDollars": [
+    8,
+    15,
+    26,
+    40,
+    61,
+    100,
+    290
+   ]
+  },
+  {
+   "key": "ahsap-pipo",
+   "title": "Ahşap pipo",
+   "baseDollars": 40,
+   "collector": 3,
+   "selectionWeight": 6,
+   "maxGroups": 3,
+   "color": "#c9a24a",
+   "shape": "Box",
+   "minDollars": [
+    8,
+    15,
+    25,
+    35,
+    50,
+    84,
+    290
+   ],
+   "maxDollars": [
+    10,
+    18,
+    31,
+    45,
+    69,
+    125,
+    485
+   ]
+  },
+  {
+   "key": "el-feneri",
+   "title": "El feneri",
+   "baseDollars": 8,
+   "collector": 0,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#6a7a52",
+   "shape": "Box",
+   "minDollars": [
+    2,
+    3,
+    5,
+    7,
+    10,
+    15,
+    33
+   ],
+   "maxDollars": [
+    2,
+    3,
+    6,
+    9,
+    14,
+    22,
+    55
+   ]
+  },
+  {
+   "key": "kahve-makinesi",
+   "title": "Filtre kahve makinesi",
+   "baseDollars": 15,
+   "collector": 0,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#b0b7bf",
+   "shape": "Box",
+   "minDollars": [
+    3,
+    5,
+    9,
+    13,
+    19,
+    28,
+    62
+   ],
+   "maxDollars": [
+    3,
+    6,
+    11,
+    17,
+    26,
+    42,
+    105
+   ]
+  },
+  {
+   "key": "askeri-telsiz",
+   "title": "Eski askeri telsiz",
+   "baseDollars": 200,
+   "collector": 5,
+   "selectionWeight": 3,
+   "maxGroups": 2,
+   "color": "#3d6f8f",
+   "shape": "Radio",
+   "minDollars": [
+    45,
+    77,
+    125,
+    175,
+    250,
+    455,
+    2120
+   ],
+   "maxDollars": [
+    54,
+    94,
+    155,
+    225,
+    345,
+    685,
+    3540
+   ]
+  },
+  {
+   "key": "telsiz",
+   "title": "Telsiz (walkie-talkie)",
+   "baseDollars": 15,
+   "collector": 1,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#3d6f8f",
+   "shape": "Box",
+   "minDollars": [
+    3,
+    5,
+    9,
+    13,
+    19,
+    29,
+    74
+   ],
+   "maxDollars": [
+    4,
+    6,
+    11,
+    17,
+    26,
+    44,
+    125
+   ]
+  },
+  {
+   "key": "marketri-masa",
+   "title": "Marketri (kakma) masa",
+   "baseDollars": 600,
+   "collector": 7,
+   "selectionWeight": 1,
+   "maxGroups": 1,
+   "color": "#8a5a2b",
+   "shape": "Table",
+   "minDollars": [
+    145,
+    240,
+    385,
+    520,
+    750,
+    1480,
+    9310
+   ],
+   "maxDollars": [
+    170,
+    290,
+    480,
+    680,
+    1040,
+    2230,
+    15520
+   ]
+  },
+  {
+   "key": "japon-kilici",
+   "title": "Japon kılıcı",
+   "baseDollars": 330,
+   "collector": 7,
+   "selectionWeight": 1,
+   "maxGroups": 1,
+   "color": "#7a8591",
+   "shape": "Box",
+   "minDollars": [
+    79,
+    135,
+    210,
+    285,
+    415,
+    815,
+    5120
+   ],
+   "maxDollars": [
+    94,
+    160,
+    265,
+    375,
+    570,
+    1230,
+    8540
+   ]
+  },
+  {
+   "key": "gazli-ocak",
+   "title": "Gazlı ocak",
+   "baseDollars": 90,
+   "collector": 1,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#b0b7bf",
+   "shape": "Box",
+   "minDollars": [
+    18,
+    32,
+    54,
+    78,
+    115,
+    175,
+    445
+   ],
+   "maxDollars": [
+    21,
+    39,
+    68,
+    100,
+    155,
+    265,
+    745
+   ]
+  },
+  {
+   "key": "dj-seti",
+   "title": "DJ seti",
+   "baseDollars": 160,
+   "collector": 1,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#8a4fb0",
+   "shape": "Box",
+   "minDollars": [
+    32,
+    57,
+    97,
+    140,
+    200,
+    310,
+    795
+   ],
+   "maxDollars": [
+    38,
+    69,
+    120,
+    180,
+    275,
+    470,
+    1320
+   ]
+  },
+  {
+   "key": "elektronik-davul",
+   "title": "Elektronik davul seti",
+   "baseDollars": 300,
+   "collector": 1,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#8a4fb0",
+   "shape": "Box",
+   "minDollars": [
+    60,
+    105,
+    180,
+    260,
+    375,
+    585,
+    1490
+   ],
+   "maxDollars": [
+    72,
+    130,
+    225,
+    340,
+    520,
+    875,
+    2480
+   ]
+  },
+  {
+   "key": "evrak-dolabi",
+   "title": "Evrak dolabı",
+   "baseDollars": 90,
+   "collector": 1,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#8a5a2b",
+   "shape": "Box",
+   "minDollars": [
+    18,
+    32,
+    54,
+    78,
+    115,
+    175,
+    445
+   ],
+   "maxDollars": [
+    21,
+    39,
+    68,
+    100,
+    155,
+    265,
+    745
+   ]
+  },
+  {
+   "key": "espresso-makinesi",
+   "title": "Espresso makinesi",
+   "baseDollars": 60,
+   "collector": 1,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#b0b7bf",
+   "shape": "Box",
+   "minDollars": [
+    12,
+    21,
+    36,
+    52,
+    75,
+    115,
+    300
+   ],
+   "maxDollars": [
+    14,
+    26,
+    45,
+    68,
+    105,
+    175,
+    495
+   ]
+  },
+  {
+   "key": "m9a3-tabanca",
+   "title": "M9A3 tabanca (replika)",
+   "baseDollars": 120,
+   "collector": 3,
+   "selectionWeight": 6,
+   "maxGroups": 3,
+   "color": "#7a8591",
+   "shape": "Box",
+   "minDollars": [
+    25,
+    45,
+    74,
+    105,
+    150,
+    255,
+    870
+   ],
+   "maxDollars": [
+    30,
+    54,
+    92,
+    135,
+    210,
+    380,
+    1450
+   ]
+  },
+  {
+   "key": "katana",
+   "title": "Katana",
+   "baseDollars": 350,
+   "collector": 7,
+   "selectionWeight": 1,
+   "maxGroups": 1,
+   "color": "#7a8591",
+   "shape": "Box",
+   "minDollars": [
+    83,
+    140,
+    225,
+    305,
+    440,
+    865,
+    5430
+   ],
+   "maxDollars": [
+    100,
+    170,
+    280,
+    395,
+    605,
+    1300,
+    9060
+   ]
+  },
+  {
+   "key": "disko-topu",
+   "title": "Disko topu",
+   "baseDollars": 30,
+   "collector": 2,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#c9a24a",
+   "shape": "Box",
+   "minDollars": [
+    6,
+    11,
+    18,
+    26,
+    38,
+    61,
+    180
+   ],
+   "maxDollars": [
+    7,
+    13,
+    23,
+    34,
+    52,
+    91,
+    300
+   ]
+  },
+  {
+   "key": "ejderhali-katana",
+   "title": "Ejderhalı katana",
+   "baseDollars": 300,
+   "collector": 7,
+   "selectionWeight": 1,
+   "maxGroups": 1,
+   "color": "#7a8591",
+   "shape": "Box",
+   "minDollars": [
+    71,
+    120,
+    190,
+    260,
+    375,
+    740,
+    4660
+   ],
+   "maxDollars": [
+    86,
+    145,
+    240,
+    340,
+    520,
+    1120,
+    7760
+   ]
+  },
+  {
+   "key": "deri-tabure",
+   "title": "Deri tabure",
+   "baseDollars": 55,
+   "collector": 1,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#8a5a2b",
+   "shape": "Box",
+   "minDollars": [
+    11,
+    20,
+    33,
+    48,
+    69,
+    105,
+    275
+   ],
+   "maxDollars": [
+    13,
+    24,
+    41,
+    62,
+    95,
+    160,
+    455
+   ]
+  },
+  {
+   "key": "arcade-makinesi",
+   "title": "Arcade oyun makinesi",
+   "baseDollars": 700,
+   "collector": 5,
+   "selectionWeight": 3,
+   "maxGroups": 2,
+   "color": "#c5463c",
+   "shape": "Box",
+   "minDollars": [
+    155,
+    270,
+    440,
+    610,
+    875,
+    1600,
+    7430
+   ],
+   "maxDollars": [
+    190,
+    325,
+    545,
+    790,
+    1210,
+    2400,
+    12380
+   ]
+  },
+  {
+   "key": "sovyet-sandalye",
+   "title": "Eski Sovyet sandalyesi",
+   "baseDollars": 45,
+   "collector": 3,
+   "selectionWeight": 6,
+   "maxGroups": 3,
+   "color": "#8a5a2b",
+   "shape": "Chair",
+   "minDollars": [
+    10,
+    17,
+    28,
+    39,
+    56,
+    95,
+    325
+   ],
+   "maxDollars": [
+    11,
+    20,
+    34,
+    51,
+    78,
+    145,
+    545
+   ]
+  },
+  {
+   "key": "mumluk",
+   "title": "Pirinç mumluk",
+   "baseDollars": 50,
+   "collector": 4,
+   "selectionWeight": 6,
+   "maxGroups": 3,
+   "color": "#c9a24a",
+   "shape": "Box",
+   "minDollars": [
+    11,
+    19,
+    31,
+    44,
+    63,
+    110,
+    440
+   ],
+   "maxDollars": [
+    13,
+    23,
+    39,
+    56,
+    87,
+    165,
+    730
+   ]
+  },
+  {
+   "key": "vintage-tabanca",
+   "title": "Vintage tabanca",
+   "baseDollars": 400,
+   "collector": 6,
+   "selectionWeight": 3,
+   "maxGroups": 2,
+   "color": "#7a8591",
+   "shape": "Box",
+   "minDollars": [
+    92,
+    160,
+    255,
+    350,
+    500,
+    950,
+    5130
+   ],
+   "maxDollars": [
+    110,
+    190,
+    315,
+    450,
+    695,
+    1430,
+    8560
+   ]
+  },
+  {
+   "key": "cicekli-vazo",
+   "title": "Çiçek desenli vazo",
+   "baseDollars": 60,
+   "collector": 4,
+   "selectionWeight": 6,
+   "maxGroups": 3,
+   "color": "#c9a24a",
+   "shape": "Box",
+   "minDollars": [
+    13,
+    23,
+    37,
+    52,
+    75,
+    130,
+    525
+   ],
+   "maxDollars": [
+    16,
+    28,
+    46,
+    68,
+    105,
+    200,
+    880
+   ]
+  },
+  {
+   "key": "duvar-aynasi",
+   "title": "Oymalı duvar aynası",
+   "baseDollars": 150,
+   "collector": 4,
+   "selectionWeight": 6,
+   "maxGroups": 3,
+   "color": "#c9a24a",
+   "shape": "Mirror",
+   "minDollars": [
+    33,
+    57,
+    93,
+    130,
+    190,
+    330,
+    1320
+   ],
+   "maxDollars": [
+    39,
+    69,
+    115,
+    170,
+    260,
+    495,
+    2190
+   ]
+  },
+  {
+   "key": "masaustu-radyo",
+   "title": "Masaüstü radyo",
+   "baseDollars": 90,
+   "collector": 4,
+   "selectionWeight": 6,
+   "maxGroups": 3,
+   "color": "#3d6f8f",
+   "shape": "Radio",
+   "minDollars": [
+    20,
+    34,
+    56,
+    78,
+    115,
+    195,
+    790
+   ],
+   "maxDollars": [
+    23,
+    41,
+    70,
+    100,
+    155,
+    295,
+    1320
+   ]
+  },
+  {
+   "key": "boy-saati",
+   "title": "Antika boy saati",
+   "baseDollars": 600,
+   "collector": 7,
+   "selectionWeight": 1,
+   "maxGroups": 1,
+   "color": "#a3763a",
+   "shape": "Box",
+   "minDollars": [
+    145,
+    240,
+    385,
+    520,
+    750,
+    1480,
+    9310
+   ],
+   "maxDollars": [
+    170,
+    290,
+    480,
+    680,
+    1040,
+    2230,
+    15520
+   ]
+  },
+  {
+   "key": "gramofon",
+   "title": "Antika gramofon",
+   "baseDollars": 420,
+   "collector": 6,
+   "selectionWeight": 3,
+   "maxGroups": 2,
+   "color": "#8a4fb0",
+   "shape": "Box",
+   "minDollars": [
+    97,
+    165,
+    265,
+    365,
+    525,
+    1000,
+    5390
+   ],
+   "maxDollars": [
+    115,
+    200,
+    330,
+    475,
+    730,
+    1500,
+    8990
+   ]
+  },
+  {
+   "key": "antika-masa-aynasi",
+   "title": "Antika masa aynası",
+   "baseDollars": 200,
+   "collector": 6,
+   "selectionWeight": 3,
+   "maxGroups": 2,
+   "color": "#c9a24a",
+   "shape": "Mirror",
+   "minDollars": [
+    46,
+    79,
+    125,
+    175,
+    250,
+    475,
+    2570
+   ],
+   "maxDollars": [
+    55,
+    95,
+    160,
+    225,
+    345,
+    715,
+    4280
+   ]
+  },
+  {
+   "key": "cop-kovasi",
+   "title": "Çöp kovası",
+   "baseDollars": 10,
+   "collector": 0,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#6a7a52",
+   "shape": "Box",
+   "minDollars": [
+    2,
+    4,
+    6,
+    9,
+    13,
+    19,
+    41
+   ],
+   "maxDollars": [
+    2,
+    4,
+    7,
+    11,
+    17,
+    28,
+    68
+   ]
+  },
+  {
+   "key": "otomat",
+   "title": "Otomat (vending)",
+   "baseDollars": 500,
+   "collector": 2,
+   "selectionWeight": 3,
+   "maxGroups": 2,
+   "color": "#3d6f8f",
+   "shape": "Box",
+   "minDollars": [
+    105,
+    180,
+    305,
+    435,
+    625,
+    1010,
+    3000
+   ],
+   "maxDollars": [
+    125,
+    220,
+    380,
+    565,
+    865,
+    1520,
+    5000
+   ]
+  },
+  {
+   "key": "vazo-remake",
+   "title": "Antika görünümlü vazo (remake)",
+   "baseDollars": 50,
+   "collector": 2,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#c9a24a",
+   "shape": "Box",
+   "minDollars": [
+    10,
+    18,
+    31,
+    44,
+    63,
+    100,
+    300
+   ],
+   "maxDollars": [
+    12,
+    22,
+    38,
+    56,
+    87,
+    150,
+    500
+   ]
+  },
+  {
+   "key": "vazo",
+   "title": "Vazo",
+   "baseDollars": 35,
+   "collector": 2,
+   "selectionWeight": 10,
+   "maxGroups": 4,
+   "color": "#c9a24a",
+   "shape": "Box",
+   "minDollars": [
+    7,
+    13,
+    21,
+    30,
+    44,
+    71,
+    210
+   ],
+   "maxDollars": [
+    9,
+    15,
+    27,
+    40,
+    61,
+    105,
+    350
+   ]
+  },
+  {
+   "key": "cep-saati",
+   "title": "Antika cep saati",
+   "baseDollars": 250,
+   "collector": 7,
+   "selectionWeight": 1,
+   "maxGroups": 1,
+   "color": "#a3763a",
+   "shape": "Box",
+   "minDollars": [
+    60,
+    100,
+    160,
+    220,
+    315,
+    620,
+    3880
+   ],
+   "maxDollars": [
+    71,
+    120,
+    200,
+    285,
+    435,
+    930,
+    6470
+   ]
+  },
+  {
+   "key": "cini-vitrin",
+   "title": "Antika çini vitrin",
+   "baseDollars": 500,
+   "collector": 6,
+   "selectionWeight": 3,
+   "maxGroups": 2,
+   "color": "#8a5a2b",
+   "shape": "Box",
+   "minDollars": [
+    115,
+    195,
+    320,
+    435,
+    625,
+    1190,
+    6420
+   ],
+   "maxDollars": [
+    140,
+    240,
+    395,
+    565,
+    865,
+    1790,
+    10700
+   ]
+  },
+  {
+   "key": "masa-lambasi",
+   "title": "Masa lambası",
+   "baseDollars": 80,
+   "collector": 3,
+   "selectionWeight": 6,
+   "maxGroups": 3,
+   "color": "#c9a24a",
+   "shape": "Lamp",
+   "minDollars": [
+    17,
+    30,
+    49,
+    70,
+    100,
+    170,
+    580
+   ],
+   "maxDollars": [
+    20,
+    36,
+    61,
+    90,
+    140,
+    255,
+    970
+   ]
+  }
+ ]
+}

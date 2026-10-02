@@ -20,3 +20,13 @@ Unity Editor bu ortamda yok; Unity assembly derlemesi, shader importu, scene ür
 Bes geometri testi gecti: dugum kimlikleri/sayilari, 4 spawn ve merkez koridor, konteyner basina en cok 30 esya cikisi, 12 raf/120 hucre ve yaklasma alanlari, 300 esyalik kurtarma gridi. AABB verisi kullanir; Unity fizik motorunun yerine gecmez.
 
 Unity'de Build Uploaded Depot (Co-op) sonrasi: giris zemini ve kapilardan yurume; her konteyneri E ile acma; iki kanadin koridora cikmamasi; acilmis kapiya gec katilim; 120 esyayi gercek raf hucrelerine yerlestirme; yeni run kapilari kapatirken oyuncularin konteyner icinde kalmamasi; dogru sahnenin client build'inde acilmasi; shaderlar/dokular/TMP'siz yazi ve FPS olcumu.
+
+## Piyasa kataloğu (Sync Market Catalog)
+
+Domain ve fiyat kuralları C# testleriyle doğrulandı; aşağıdakiler Unity'de elle denenmeli:
+
+1. **Bidwarss > Sync Market Catalog**: Console'da "piyasa katalogu güncellendi (43 eşya)" ve `Leaderboard rules hash` satırı görünür, hata yoktur. Mevcut `visualPrefab` atamaları aynı `key`lerde durur.
+2. Yeni hash'i skor servisinin `BIDWARSS_ALLOWED_RULES` listesine ekle; eski hash'li host ile yeni build bağlanmaya çalışınca "farklı katalog" reddi görülür.
+3. Play > Oda Kur: HUD'daki depo listesi 12 satırı üst üste binmeden gösterir (Kasa/İstif adları Türkçe, uzun adlar kesilmez).
+4. Birkaç depo aç (yeni depo butonu): pahalı koleksiyon parçaları (boy saati, katana, marketri masa) seyrek çıkar, çıktığında Efsane durumu birkaç bin dolardır; çöp kovası/el feneri gibi eşyalar Efsane'de bile en çok onlarca dolardır.
+5. Sonuç ekranındaki yedi durum toplamı toplam kazanca eşittir.

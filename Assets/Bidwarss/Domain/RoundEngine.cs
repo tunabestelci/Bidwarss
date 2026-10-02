@@ -40,12 +40,33 @@ namespace Bidwarss.Domain
             rules.Validate(); Seed = seed; RulesHash = rules.Fingerprint();
             var random = new StableRandom(seed);
             var groups = new int[rules.items.Length];
-            var types = new List<int>();
-            for (int i = 0; i < groups.Length; i++) types.Add(i);
-            random.Shuffle(types);
             int assigned = 0;
-            // Ensure variety when the group budget permits every type.
-            for (int i = 0; i < Math.Min(groups.Length, rules.totalGroups); i++) { groups[types[i]]++; assigned++; }
+            if (groups.Length <= rules.totalGroups)
+            {
+                // Variety: when the group budget permits every type, each appears at least once.
+                var types = new List<int>();
+                for (int i = 0; i < groups.Length; i++) types.Add(i);
+                random.Shuffle(types);
+                for (int i = 0; i < groups.Length; i++) { groups[types[i]]++; assigned++; }
+            }
+            else
+            {
+                // More types than groups: draw distinct types by selection weight, so common goods
+                // show up often and rare collectibles seldom.
+                var pool = new List<int>();
+                for (int i = 0; i < groups.Length; i++) pool.Add(i);
+                while (assigned < rules.totalGroups)
+                {
+                    int weight = 0;
+                    foreach (int i in pool) weight += rules.items[i].selectionWeight;
+                    int ticket = random.Range(weight);
+                    for (int p = 0; p < pool.Count; p++)
+                    {
+                        ticket -= rules.items[pool[p]].selectionWeight;
+                        if (ticket < 0) { groups[pool[p]]++; assigned++; pool.RemoveAt(p); break; }
+                    }
+                }
+            }
             while (assigned < rules.totalGroups)
             {
                 int weight = 0;
@@ -68,9 +89,9 @@ namespace Bidwarss.Domain
                 {
                     int ticket = random.Range(conditionWeight), condition = 0;
                     for (; condition < 6; condition++) { ticket -= rules.conditions[condition].weight; if (ticket < 0) break; }
-                    var band = rules.conditions[condition];
-                    int percent = band.minimumPercent + random.Range(band.maximumPercent - band.minimumPercent + 1);
-                    int dollars = rules.Price(kind, (ItemCondition)condition, percent);
+                    int low, high;
+                    rules.PriceBand(kind, (ItemCondition)condition, out low, out high);
+                    int dollars = low + random.Range(high - low + 1);
                     items.Add(new RoundItem { kind = kind, condition = (ItemCondition)condition, dollars = dollars });
                     TotalDollars = checked(TotalDollars + dollars);
                 }

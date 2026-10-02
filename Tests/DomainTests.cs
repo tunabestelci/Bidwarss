@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 using Bidwarss.Domain;
 
 public static class DomainTests
@@ -10,6 +12,78 @@ public static class DomainTests
     static GameRules Rules()=>new GameRules {items=new[]{
         new ItemRule{key="mirror",baseDollars=80},new ItemRule{key="table",baseDollars=100},
         new ItemRule{key="chair",baseDollars=60},new ItemRule{key="radio",baseDollars=120},new ItemRule{key="lamp",baseDollars=50}}};
+    // The shipped market (Assets/Bidwarss/Data/ItemCatalog.json), turned into rules the way ItemCatalog.CreateRules does.
+    static GameRules MarketRules(out JsonElement items)
+    {
+        string dir=AppContext.BaseDirectory,path=null;
+        while(dir!=null&&path==null){var candidate=Path.Combine(dir,"Assets","Bidwarss","Data","ItemCatalog.json");if(File.Exists(candidate))path=candidate;else dir=Path.GetDirectoryName(dir);}
+        Check(path!=null,"Market catalog JSON found");
+        var root=JsonDocument.Parse(File.ReadAllText(path)).RootElement;
+        items=root.GetProperty("items");
+        var rules=new GameRules{items=items.EnumerateArray().Select(e=>new ItemRule{
+            key=e.GetProperty("key").GetString(),baseDollars=e.GetProperty("baseDollars").GetInt32(),
+            selectionWeight=e.GetProperty("selectionWeight").GetInt32(),maxGroups=e.GetProperty("maxGroups").GetInt32(),
+            minDollars=e.GetProperty("minDollars").EnumerateArray().Select(v=>v.GetInt32()).ToArray(),
+            maxDollars=e.GetProperty("maxDollars").EnumerateArray().Select(v=>v.GetInt32()).ToArray()}).ToArray()};
+        var weights=root.GetProperty("conditions").EnumerateArray().Select(c=>c.GetProperty("weight").GetInt32()).ToArray();
+        for(int i=0;i<7;i++)rules.conditions[i].weight=weights[i];
+        return rules;
+    }
+    static void MarketTests()
+    {
+        JsonElement json;var market=MarketRules(out json);market.Validate();
+        Check(market.items.Length>=40,"Whole site catalog shipped");
+        var elements=json.EnumerateArray().ToArray();
+        for(int k=0;k<market.items.Length;k++)
+        {
+            var item=market.items[k];int coll=elements[k].GetProperty("collector").GetInt32();
+            int mid,midMax;market.PriceBand(k,ItemCondition.Average,out mid,out midMax);
+            Check(mid<=item.baseDollars&&item.baseDollars<=midMax,"Average condition brackets the market value: "+item.key);
+            int topMin,topMax,bottomMax,bottomMin;
+            market.PriceBand(k,ItemCondition.Legendary,out topMin,out topMax);market.PriceBand(k,ItemCondition.Terrible,out bottomMin,out bottomMax);
+            Check(bottomMax<mid,"Terrible is cheaper than Average: "+item.key);
+            if(coll>=6)Check(topMin>=8*item.baseDollars,"Collectibles are worth far more at the top: "+item.key);
+            if(coll==0)Check(topMax<=8*item.baseDollars,"Mass-produced goods cannot become treasures: "+item.key);
+        }
+        // The reported bugs: an antique must out-price plain goods in every condition.
+        int Index(string key)=>Array.FindIndex(market.items,x=>x.key==key);
+        int clock=Index("boy-saati"),mill=Index("antika-biber-degirmeni"),bin=Index("cop-kovasi"),table=Index("vintage-masa");
+        Check(clock>=0&&mill>=0&&bin>=0&&table>=0,"Reference items exist");
+        Check(market.items[mill].baseDollars<market.items[clock].baseDollars,"A pepper mill is not worth more than a grandfather clock");
+        int lo,hi,lo2,hi2;
+        market.PriceBand(clock,ItemCondition.Terrible,out lo,out hi);market.PriceBand(bin,ItemCondition.Legendary,out lo2,out hi2);
+        Check(lo>hi2/3,"Even a wrecked antique clock is not trash-can money");
+        market.PriceBand(table,ItemCondition.Legendary,out lo,out hi);
+        Check(lo>=1500,"A legendary vintage table is worth real money");
+        // Every drawn price stays inside its item's band; the same seed gives the same depot.
+        long total=0;
+        for(int seed=0;seed<400;seed++)
+        {
+            var round=new RoundEngine(market,seed);
+            Check(round.Items.Count==120&&round.Items.GroupBy(x=>x.kind).Count()==12,"Twelve distinct types per depot");
+            foreach(var item in round.Items)
+            {
+                int a,b;market.PriceBand(item.kind,item.condition,out a,out b);
+                Check(item.dollars>=a&&item.dollars<=b,"Price inside its condition band");
+            }
+            total+=round.TotalDollars;
+        }
+        Check(total/400>5000&&total/400<60000,"Average depot value is sane: "+total/400);
+        var again=new RoundEngine(market,77);var twin=new RoundEngine(market,77);
+        Check(again.Items.Select(x=>x.kind+":"+x.dollars).SequenceEqual(twin.Items.Select(x=>x.kind+":"+x.dollars)),"Market depots reproduce from a seed");
+        // Selection weights: of many types only a few fit, and heavy ones appear far more often.
+        var weighted=new GameRules{totalGroups=3,items=Enumerable.Range(0,20).Select(i=>new ItemRule{key="t"+i,baseDollars=50,selectionWeight=i<2?200:1,maxGroups=2}).ToArray()};
+        int heavy=0,light=0;
+        for(int seed=0;seed<300;seed++)foreach(var kind in new RoundEngine(weighted,seed).Items.Select(x=>x.kind).Distinct()){if(kind<2)heavy++;else light++;}
+        Check(heavy>400&&light<500,"Heavy types dominate when there are more types than groups: "+heavy+"/"+light);
+        // Invalid or overlapping markets are rejected, and balance changes re-key the ranking board.
+        var broken=MarketRules(out json);broken.items[0].minDollars[3]=broken.items[0].maxDollars[2];
+        bool threw=false;try{broken.Validate();}catch(ArgumentException){threw=true;}Check(threw,"Overlapping condition bands rejected");
+        var short6=MarketRules(out json);short6.items[1].minDollars=short6.items[1].minDollars.Take(6).ToArray();
+        threw=false;try{short6.Validate();}catch(ArgumentException){threw=true;}Check(threw,"Incomplete market rejected");
+        var repriced=MarketRules(out json);repriced.items[2].maxDollars[6]+=10;
+        Check(repriced.Fingerprint()!=market.Fingerprint(),"Repricing changes the rules hash");
+    }
     public static void Main()
     {
         var rules=Rules();string error;
@@ -75,6 +149,7 @@ public static class DomainTests
         var limited=new RoundEngine(constrained,8);Check(limited.Items.GroupBy(x=>x.kind).All(g=>g.Count()==10),"Exact caps");
         var changed=Rules();changed.items[0].baseDollars++;
         Check(changed.Fingerprint()!=rules.Fingerprint(),"Changed balance uses different ranking board");
+        MarketTests();
         Console.WriteLine("PASS: "+checks+" assertions; 2000 generated scenarios; inventory, races, completion, pricing and limits.");
     }
 }

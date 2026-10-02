@@ -45,6 +45,8 @@ namespace Bidwarss.Editor
                 Entry("radio", "Radyo", 120, ItemCatalog.SampleShape.Radio, new Color(.4f,.65f,.44f)),
                 Entry("lamp", "Lamba", 80, ItemCatalog.SampleShape.Lamp, new Color(.95f,.78f,.3f))
             };
+            // The market data (titles, per-condition prices) replaces the five silhouettes whenever it is present.
+            if (CatalogSync.Available) CatalogSync.Apply(catalog);
             AssetDatabase.CreateAsset(catalog, Root + "/ItemCatalog.asset");
             if (GraphicsSettings.defaultRenderPipeline == null)
             {

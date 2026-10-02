@@ -40,27 +40,28 @@ Unity'de paketler derlendikten sonra **Bidwarss > Build Uploaded Depot (Co-op)**
 
 ## Durum ve para
 
-Nadirlik kullanılmaz. Her türün `baseDollars` değeri ile durum çarpanı birlikte fiyatı belirler. Örnek temel değeri $100 olan masa:
+Nadirlik kullanılmaz. Her eşyanın **kendi piyasası** vardır: yedi durumun her biri için ayrı bir dolar aralığı. Aralıklar artandır ve birbirine girmez (daha kötü durumdaki eşya daha iyisinden pahalı çıkamaz). "Orta" durum eşyanın gerçek ikinci el piyasa değerini (`baseDollars`) kapsar. Fiyat, durumun aralığından düz dağılımla çekilir; süre kazançtan düşülmez, eşitlikte kısa süre öne geçer.
 
-| Durum | Fiyat | Varsayılan ağırlık |
-|---|---:|---:|
-| Rezalet | $15–30 | 8 |
-| Çok kötü | $35–50 | 14 |
-| Kötü | $60–85 | 20 |
-| Orta | $100–150 | 27 |
-| İyi | $170–220 | 18 |
-| Çok iyi | $250–300 | 10 |
-| Efsane | $500–600 | 3 |
+Aralıkları `Tools/market.py` üretir ve eşyanın **koleksiyon puanı** (0–10) belirler. Sıradan seri üretim eşyada üst durumlar ılımlı kalır; antika ve koleksiyonluk eşyada Çok iyi ve Efsane durumları hızla açılır. Antika bir eşya bozuk durumda da değer taşır. Örnekler:
 
-Bunlar ilk denge değerleridir; katalogdan değiştirilebilir. Aralık içinde tam sayı yüzde çekilir, temel değerle çarpılıp tam dolara yuvarlanır (aşağı). Süre kaydedilir, kazançtan düşülmez. Aynı para puanındaki sıralama eşitliğinde kısa süre öne gelir.
+| Eşya | Piyasa değeri | Koleksiyon | Rezalet | Orta | Efsane |
+|---|---:|---:|---:|---:|---:|
+| Çöp kovası | $10 | 0 | $2 | $9–11 | $41–68 |
+| Masaüstü radyo | $90 | 4 | $20–23 | $78–100 | $790–1.320 |
+| Vintage ahşap masa | $350 | 4 | $76–91 | $305–395 | $3.070–5.120 |
+| Antika boy saati | $600 | 7 | $145–170 | $520–680 | $9.310–15.520 |
+
+Durum çıkma ağırlıkları tüm eşyalar için ortaktır: Rezalet 8, Çok kötü 14, Kötü 20, Orta 27, İyi 18, Çok iyi 10, Efsane 3. Katalog 64 türe kadar çıkabilir; bir depoda 12 tür kullanılır. Türler `selectionWeight` ağırlığıyla seçilir (sıradan eşya sık, pahalı koleksiyon parçası seyrek), koleksiyon parçaları `maxGroups` ile 1–2 istifle sınırlıdır.
+
+Piyasayı değiştirmek için `Tools/market.py` içindeki tabloyu düzenle, `python Tools/market.py` çalıştır (`Assets/Bidwarss/Data/ItemCatalog.json` yeniden yazılır), sonra Unity'de **Bidwarss > Sync Market Catalog**. Kural hash'i değişir; yeni hash'i skor servisinin izin listesine ekle ve herkes aynı build'i kullansın. Aralığı elle girmek istersen katalog kaydında `minDollars` / `maxDollars` dizilerini doldur; boş bırakılan eşya eski yöntemle (`baseDollars` x genel yüzde bandı) fiyatlanır.
 
 ## Kendi eşyalarını eklemek
 
-`GeneratedV2/ItemCatalog.asset` içindeki her kayıt: kalıcı ve benzersiz `key`, görünen `title`, `baseDollars`, seçim ağırlığı `selectionWeight`, en fazla onlu grup sayısı `maxGroups`, renk ve isteğe bağlı `visualPrefab`.
+`GeneratedV2/ItemCatalog.asset` içindeki her kayıt: kalıcı ve benzersiz `key`, görünen `title`, `baseDollars`, koleksiyon puanı `collector`, durum fiyat aralıkları `minDollars`/`maxDollars`, seçim ağırlığı `selectionWeight`, en fazla onlu grup sayısı `maxGroups`, renk ve isteğe bağlı `visualPrefab`. Kayıtların çoğunu elle yazma: katalog `Bidwarss > Sync Market Catalog` ile `Data/ItemCatalog.json` dosyasından (Kasa Defteri sitesiyle aynı 43 eşya) doldurulur; mevcut `visualPrefab` atamaların `key` eşleşirse korunur. Yeni eşya için önce `Tools/market.py` tablosuna satır ekle.
 
 Prefab sadece görseldir; NetworkObject/oynanış scripti ekleme. Çocuk collider'ları devre dışı bırakılır, görünüm taşıma hücresine otomatik ölçeklenir; gerçek etkileşim collider'ını oyun sağlar. Beş geçici ayna/masa/sandalye/radyo/lamba silueti model bağlanana kadar kullanılır. Durum ayrı renk mührü ile gösterilir; kendi modelinin malzemesi boyanmaz.
 
-Warehouse State üzerindeki `totalGroups` toplam eşya sayısını 10'lu gruplarla belirler. Şimdiki sahne 12 palet içerir; artırırken `slots` ve `stackLabels` dizilerini ve fiziksel paletleri de büyüt. Kod sınırları 300 eşya, 20 kasa, 16 türdür. Katalog kapasitesi hedef grupları karşılamazsa oyun açıklayıcı hatayla başlamaz. Özel sahnede eşya çıkarma alanlarını ve bağlantı kopması kurtarma alanını boş tut.
+Warehouse State üzerindeki `totalGroups` toplam eşya sayısını 10'lu gruplarla belirler. Şimdiki sahne 12 palet içerir; artırırken `slots` ve `stackLabels` dizilerini ve fiziksel paletleri de büyüt. Kod sınırları 300 eşya, 20 kasa, 64 türdür. Katalog kapasitesi hedef grupları karşılamazsa oyun açıklayıcı hatayla başlamaz. Özel sahnede eşya çıkarma alanlarını ve bağlantı kopması kurtarma alanını boş tut.
 
 ## Co-op
 
@@ -79,9 +80,10 @@ Yerel ilk 100 sonuç `Application.persistentDataPath/bidwarss-results-v2.json` i
 ```sh
 dotnet run --project Tests/DomainTests.csproj
 python -m unittest discover -s LeaderboardServer -v
+python -m unittest discover -s Tools -v
 ```
 
-2.000 seed üzerinde 266.033 C# kontrolü geçti. Skor servisinin kimlik doğrulama, tekrar gönderim, çakışma, sıralama, filtreleme ve HTTP okuma testleri geçti. Bu çalışma ortamında Unity Editor bulunmadığından Unity derleme/Play Mode ve iki gerçek istemcili oturum henüz çalıştırılmadı. [Manuel kontrol listesi](Documentation/VALIDATION.md).
+2.000 seed üzerinde 314.549 C# kontrolü geçti (piyasa fiyatları, antika/ucuz eşya karşılaştırmaları, ağırlıklı tür seçimi, çakışan bant reddi dahil). Skor servisinin kimlik doğrulama, tekrar gönderim, çakışma, sıralama, filtreleme ve HTTP okuma testleri geçti. Bu çalışma ortamında Unity Editor bulunmadığından Unity derleme/Play Mode ve iki gerçek istemcili oturum henüz çalıştırılmadı. [Manuel kontrol listesi](Documentation/VALIDATION.md).
 
 ### Unity 6.5 EntityId / CS0619 hatasi
 

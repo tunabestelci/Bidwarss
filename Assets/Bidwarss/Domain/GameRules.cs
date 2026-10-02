@@ -15,6 +15,12 @@ namespace Bidwarss.Domain
         public int baseDollars = 100;
         public int selectionWeight = 1;
         public int maxGroups = 5;
+        // Optional per-item market: dollar range for each of the seven conditions, ascending and
+        // non-overlapping. Null/empty falls back to baseDollars x the global percent bands, which
+        // cannot express antiques (a collectible's top tiers are worth far more than a plain item's).
+        public int[] minDollars;
+        public int[] maxDollars;
+        public bool HasMarket => minDollars != null && maxDollars != null && minDollars.Length > 0;
     }
 
     [Serializable]
@@ -29,7 +35,9 @@ namespace Bidwarss.Domain
     public sealed class GameRules
     {
         public const int StackSize = 10;
-        public const int Version = 2;
+        public const int Version = 3;
+        public const int MaxItemKinds = 64;
+        public const int MaxItemDollars = 1000000;
         public int crateCount = 10;
         public int totalGroups = 12;
         public ItemRule[] items;
@@ -45,7 +53,7 @@ namespace Bidwarss.Domain
         {
             if (crateCount < 1 || crateCount > 20 || totalGroups < 1 || totalGroups > 30 || totalGroups * StackSize < crateCount)
                 throw new ArgumentException("Kutu sayısı 1–20, istif sayısı 1–30 olmalı; her kutuya en az bir eşya düşmeli.");
-            if (items == null || items.Length == 0 || items.Length > 16) throw new ArgumentException("Katalogda 1–16 eşya türü olmalı.");
+            if (items == null || items.Length == 0 || items.Length > MaxItemKinds) throw new ArgumentException("Katalogda 1–" + MaxItemKinds + " eşya türü olmalı.");
             var keys = new HashSet<string>(StringComparer.Ordinal);
             int capacity = 0;
             foreach (var item in items)
@@ -54,6 +62,7 @@ namespace Bidwarss.Domain
                     throw new ArgumentException("Eşya anahtarları boş olmamalı ve benzersiz olmalı.");
                 if (item.baseDollars < 1 || item.baseDollars > 100000 || item.selectionWeight < 1 || item.selectionWeight > 1000 || item.maxGroups < 1 || item.maxGroups > 30)
                     throw new ArgumentException("Eşya fiyatı, ağırlığı veya grup sınırı geçersiz.");
+                ValidateMarket(item);
                 capacity += item.maxGroups;
             }
             if (capacity < totalGroups) throw new ArgumentException("Tür başına grup sınırları toplam istif sayısını karşılamıyor.");
@@ -67,20 +76,44 @@ namespace Bidwarss.Domain
             }
         }
 
+        static void ValidateMarket(ItemRule item)
+        {
+            if (!item.HasMarket) return;
+            if (item.minDollars.Length != 7 || item.maxDollars == null || item.maxDollars.Length != 7)
+                throw new ArgumentException("Eşya piyasası tam yedi durum fiyat aralığı içermeli: " + item.key);
+            int previous = 0;
+            for (int i = 0; i < 7; i++)
+            {
+                int low = item.minDollars[i], high = item.maxDollars[i];
+                // Every condition must sit strictly above the previous one: a worse item can never out-price a better one.
+                if (low < 1 || high < low || high > MaxItemDollars || low <= previous)
+                    throw new ArgumentException("Durum fiyat aralıkları artan ve çakışmasız olmalı: " + item.key);
+                previous = high;
+            }
+        }
+
         public string Fingerprint()
         {
             Validate();
             var s = new StringBuilder().Append(Version).Append('|').Append(crateCount).Append('|').Append(totalGroups);
-            foreach (var i in items) s.Append('|').Append(i.key).Append('|').Append(i.baseDollars).Append('|').Append(i.selectionWeight).Append('|').Append(i.maxGroups);
+            foreach (var i in items)
+            {
+                s.Append('|').Append(i.key).Append('|').Append(i.baseDollars).Append('|').Append(i.selectionWeight).Append('|').Append(i.maxGroups);
+                if (i.HasMarket) for (int k = 0; k < 7; k++) s.Append(':').Append(i.minDollars[k]).Append('-').Append(i.maxDollars[k]);
+            }
             foreach (var c in conditions) s.Append('|').Append(c.minimumPercent).Append('|').Append(c.maximumPercent).Append('|').Append(c.weight);
             using (var hash = SHA256.Create()) return BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(s.ToString()))).Replace("-", "").ToLowerInvariant();
         }
 
-        public int Price(int kind, ItemCondition condition, int percent)
+        // Inclusive dollar range of one item in one condition.
+        public void PriceBand(int kind, ItemCondition condition, out int min, out int max)
         {
-            var band = conditions[(int)condition];
-            if (percent < band.minimumPercent || percent > band.maximumPercent) throw new ArgumentOutOfRangeException(nameof(percent));
-            return Math.Max(1, checked(items[kind].baseDollars * percent) / 100);
+            var item = items[kind];
+            int c = (int)condition;
+            if (item.HasMarket) { min = item.minDollars[c]; max = item.maxDollars[c]; return; }
+            var band = conditions[c];
+            min = Math.Max(1, checked(item.baseDollars * band.minimumPercent) / 100);
+            max = Math.Max(min, checked(item.baseDollars * band.maximumPercent) / 100);
         }
     }
 

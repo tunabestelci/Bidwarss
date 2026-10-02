@@ -99,12 +99,15 @@ namespace Bidwarss
             }
             float listY=held>0?355:278;
             Text(new Rect(1200,listY,350,30),"DEPO LİSTESİ",heading,teal);
+            // The catalog can hold dozens of types but a depot only uses a few: rows are packed by what is in play.
+            int row=0;
             for(int kind=0;kind<world.catalog.entries.Length;kind++)
             {
                 int need=0,done=0;
                 for(int i=0;i<world.Stacks.Count;i++)if(world.Stacks[i].kind==kind){need+=10;done+=world.Stacks[i].count;}
                 if(need==0)continue;
-                Text(new Rect(1200,listY+42+kind*34,350,28),world.catalog.entries[kind].title+"   "+done+" / "+need,small,done==need?teal:paper);
+                Text(new Rect(1200,listY+42+row*30,380,28),world.catalog.entries[kind].title+"   "+done+" / "+need,small,done==need?teal:paper);
+                row++;
             }
             if(Cursor.lockState==CursorLockMode.Locked)
             {
