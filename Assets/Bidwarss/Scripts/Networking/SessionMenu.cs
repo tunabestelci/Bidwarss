@@ -43,7 +43,7 @@ namespace Bidwarss
             RemoveDuplicatePrefabRegistrations();
             DisplayName=PlayerPrefs.GetString("Bidwarss.Name","Oyuncu");
             if(!string.IsNullOrEmpty(lastStatus)){Status=lastStatus;lastStatus=null;}
-            network.NetworkConfig.ConnectionApproval=true;network.NetworkConfig.ProtocolVersion=3;
+            network.NetworkConfig.ConnectionApproval=true;network.NetworkConfig.ProtocolVersion=4;
             network.ConnectionApprovalCallback=Approve;
             network.OnClientDisconnectCallback+=Disconnected;network.OnClientStopped+=Stopped;network.OnTransportFailure+=TransportFailed;
         }

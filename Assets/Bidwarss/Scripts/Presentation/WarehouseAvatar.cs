@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Bidwarss
 {
-    // Procedural placeholder worker. Visual animation follows replicated player motion on every peer.
+    // Bruno follows replicated movement. The old worker remains a missing-asset fallback.
     public sealed class WarehouseAvatar : MonoBehaviour
     {
         Transform leftArm,rightArm,leftLeg,rightLeg,torso;
@@ -10,9 +10,19 @@ namespace Bidwarss
         float gait,speed;
         WarehousePlayer player;
         Material material;
+        BrunoMotion bruno;
         public void Initialize(WarehousePlayer owner,Material shared)
         {
             player=owner;material=shared;previous=owner.transform.position;
+            var character=Resources.Load<GameObject>("Bruno/BrunoCharacter");
+            if(character!=null)
+            {
+                var instance=Instantiate(character,transform,false);
+                bruno=instance.GetComponent<BrunoMotion>();
+                if(bruno!=null){bruno.Bind(owner);return;}
+                Destroy(instance);
+            }
+            Debug.LogWarning("Bruno prefab bulunamadi. Bidwarss > Bruno > Build Character Assets komutunu calistirin.",this);
             Color navy=new Color(.12f,.2f,.29f),orange=new Color(.96f,.48f,.12f),skin=new Color(.77f,.51f,.34f),dark=new Color(.07f,.09f,.12f);
             torso=Joint("Torso",transform,new Vector3(0,1.06f,0));
             Part("Jacket",torso,Vector3.zero,new Vector3(.58f,.55f,.33f),orange);
@@ -46,7 +56,7 @@ namespace Bidwarss
         }
         void LateUpdate()
         {
-            if(player==null||torso==null)return;
+            if(bruno!=null||player==null||torso==null)return;
             var delta=player.transform.position-previous;delta.y=0;previous=player.transform.position;
             float measured=Time.deltaTime>0?delta.magnitude/Time.deltaTime:0;
             speed=Mathf.Lerp(speed,Mathf.Min(measured,4.5f),1-Mathf.Exp(-12*Time.deltaTime));

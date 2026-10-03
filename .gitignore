@@ -24,3 +24,7 @@ Tests/obj/
 __pycache__/
 *.sqlite3*
 .bidwarss-backups/
+
+*.blend1
+*.blend2
+Tools/Bruno/node_modules/

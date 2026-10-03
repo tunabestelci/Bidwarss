@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace Bidwarss
 {
+    [DefaultExecutionOrder(200)]
     public sealed class WarehouseWorld : NetworkBehaviour
     {
         public static WarehouseWorld Instance { get; private set; }
@@ -86,7 +87,7 @@ namespace Bidwarss
             RulesHash.Value=Engine.RulesHash; TeamNames.Value=""; roster.Clear();
             Items.Clear(); Crates.Clear(); Stacks.Clear();
             holdStarted=new double[crates.Length];
-            for(int i=0;i<crates.Length;i++) Crates.Add(new CrateState { opener=ItemState.Nobody });
+            for(int i=0;i<crates.Length;i++) Crates.Add(new CrateState { opener=ItemState.Nobody,openingMode=OpeningModeFor(i) });
             for(int i=0;i<Engine.StackCount;i++) Stacks.Add(new StackState { kind=Engine.StackKind(i) });
             foreach(var item in Engine.Items) Items.Add(ToState(item, Vector3.zero));
             foreach(var p in WarehousePlayer.Players.Values) p.ServerResetForRound();
@@ -100,13 +101,38 @@ namespace Bidwarss
         }
         public int HeldValue(ulong client)
         { int total=0; for(int i=0;i<Items.Count;i++) if(Items[i].holder==client) total+=Items[i].dollars; return total; }
+        public OpeningMode OpeningModeFor(int crate)
+        {
+            var profile=crates[crate].GetComponent<CrateOpeningProfile>();
+            return profile!=null?profile.mode:OpeningMode.CutThenPry;
+        }
+        public float OpeningReach(int crate)=>(crate<Crates.Count?Crates[crate].openingMode:OpeningModeFor(crate))==OpeningMode.Hands?3.5f:.8f;
+        float OpeningDuration(int crate)
+        {
+            var profile=crates[crate].GetComponent<CrateOpeningProfile>();
+            return Mathf.Max(profile!=null?profile.duration:openSeconds,OpeningSequence.MinimumDuration(OpeningModeFor(crate)));
+        }
+        public bool TryOpening(ulong client,out CrateState state,out OpeningMode mode)
+        {
+            for(int i=0;i<Crates.Count;i++)
+                if(!Crates[i].opened && Crates[i].opener==client)
+                {state=Crates[i];mode=state.openingMode;return true;}
+            state=default;mode=OpeningMode.Hands;return false;
+        }
         public string Hint(InteractionTarget target, ulong client)
         {
             if(Completed.Value) return "Depo tamamlandı! Sonuçlara TAB ile bak.";
             if(target==null) return "Kutuyu aç • Eşyaları türüne göre 10'lu istifle";
             int kind; int held=HeldCount(client,out kind);
             if(target.kind==TargetKind.Crate)
-                return Crates[target.id].opened ? "Kutu boşaltıldı" : "E BASILI TUT • Kutuyu aç";
+            {
+                if(target.id<0 || target.id>=Crates.Count)return "";
+                if(Crates[target.id].opened)return "Kutu boşaltıldı";
+                if(held>0)return "Önce elindeki eşyaları bırak veya istifle";
+                if(WarehousePlayer.Players.TryGetValue(client,out var player) && player.IsOwner && player.LookDistance>OpeningReach(target.id))return "Aracı kullanmak için kasaya yaklaş";
+                var tool=OpeningSequence.Sample(Crates[target.id].openingMode,Crates[target.id].progress,out _);
+                return tool==OpeningTool.BoxCutter?"E BASILI TUT • Maket bıçağıyla bandı kes":tool==OpeningTool.PryBar?"E BASILI TUT • Çivi sökücüyle kapağı gevşet":"E BASILI TUT • Kapıyı aç";
+            }
             if(target.kind==TargetKind.Slot)
             {
                 if(target.id>=Stacks.Count) return "";
@@ -137,7 +163,9 @@ namespace Bidwarss
                 if(state.opener!=ItemState.Nobody)
                 {
                     if(StartedAt.Value<=0) { StartedAt.Value=NetworkManager.ServerTime.Time; TrackRoster(); }
-                    state.progress=Mathf.Clamp01((float)((NetworkManager.ServerTime.Time-holdStarted[i])/openSeconds));
+                    if(owner.ServerLookHit(TargetKind.Crate,i,OpeningReach(i),out var contact))
+                    {state.contactPoint=contact.point;state.contactNormal=contact.normal;}
+                    state.progress=Mathf.Clamp01((float)((NetworkManager.ServerTime.Time-holdStarted[i])/OpeningDuration(i)));
                     if(state.progress>=1)
                     {
                         string error;
@@ -155,7 +183,7 @@ namespace Bidwarss
         {
             int kind;
             return player!=null && player.WantsCrate==crate && player.InputFresh &&
-                Engine.HeldCount(player.OwnerClientId,out kind)==0 && player.ServerLooksAt(TargetKind.Crate,crate);
+                Engine.HeldCount(player.OwnerClientId,out kind)==0 && player.ServerLookHit(TargetKind.Crate,crate,OpeningReach(crate),out _);
         }
         void TrackRoster()
         {
@@ -278,13 +306,15 @@ namespace Bidwarss
                 if(!views.TryGetValue(item.id,out view))
                 { view=ItemVisual.Create(item,catalog.entries[item.kind],itemMaterial); views.Add(item.id,view); }
                 Vector3 pos=item.position; Quaternion rot=item.location==ItemLocation.Stacked && item.slot>=0 ? StackRotation(item.slot,item.stackIndex) : Quaternion.Euler(0,item.yaw,0);
+                float visualScale=item.location==ItemLocation.Stacked&&slots[item.slot].GetComponent<StackLayout>()!=null?.85f:1;
                 if(item.location==ItemLocation.Held && WarehousePlayer.Players.TryGetValue(item.holder,out var owner))
                 {
                     carryIndices.TryGetValue(item.holder,out carryIndex); carryIndices[item.holder]=carryIndex+1;
-                    pos=owner.transform.position+Vector3.up*(.73f+carryIndex*.065f)+owner.transform.forward*.9f+owner.transform.right*.32f;
-                    rot=owner.transform.rotation;
+                    int kind;int count=HeldCount(item.holder,out kind);
+                    if(owner.Grip!=null)owner.Grip.ItemPose(carryIndex,count,view.ModelBounds,out pos,out rot,out visualScale);
+                    else{pos=owner.transform.position+Vector3.up*1.1f+owner.transform.forward*.55f;rot=owner.transform.rotation;}
                 }
-                view.UpdateState(item,pos,rot,item.location==ItemLocation.Stacked&&slots[item.slot].GetComponent<StackLayout>()!=null?.85f:1);
+                view.UpdateState(item,pos,rot,visualScale);
             }
         }
     }
