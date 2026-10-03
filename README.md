@@ -53,13 +53,13 @@ Aralıkları `Tools/market.py` üretir ve eşyanın **koleksiyon puanı** (0–1
 
 Durum çıkma ağırlıkları tüm eşyalar için ortaktır: Rezalet 8, Çok kötü 14, Kötü 20, Orta 27, İyi 18, Çok iyi 10, Efsane 3. Katalog 64 türe kadar çıkabilir; bir depoda 12 tür kullanılır. Türler `selectionWeight` ağırlığıyla seçilir (sıradan eşya sık, pahalı koleksiyon parçası seyrek), koleksiyon parçaları `maxGroups` ile 1–2 istifle sınırlıdır.
 
-**Ünlü sahip.** Oyunda *Çok iyi* (destansı) ve *Efsane* çıkan her eşya tanınmış birine ait bir parçadır ve bu yüzden değerlidir: ipucu metninde "Naz Kestrel'in Spor Motosikleti" gibi görünür. Sahipler uydurma sahne isimleridir (`Domain/Provenance.cs`, 576 kombinasyon); seçim tur tohumundan ve eşya numarasından türetilir, fiyatı ve rastgele akışı etkilemez, yalnız oyunda görünür (sitede yok). Eşyanın iyelikli hâli `Tools/market.py` içindeki `OWNED` tablosundan gelir (`owned` alanı).
+**Ünlü sahip.** Oyunda *Çok iyi* (destansı) ve *Efsane* çıkan her eşya tanınmış birine ait bir parçadır ve bu yüzden değerlidir: ipucu metninde "Naz Kestrel'in Spor Motosikleti" gibi görünür. Sahipler uydurma sahne isimleridir (`Domain/Provenance.cs`, 576 kombinasyon); seçim tur tohumundan ve eşya numarasından türetilir, fiyatı ve rastgele akışı etkilemez, yalnız oyunda görünür (sitede yok). Eşyanın iyelikli hâli katalogdaki `owned` alanıdır (`Tools/items.json`; yeni eşyada otomatik üretilir, aşağıya bak).
 
-Piyasayı değiştirmek için `Tools/market.py` içindeki tabloyu düzenle, `python Tools/market.py` çalıştır (`Assets/Bidwarss/Data/ItemCatalog.json` yeniden yazılır), sonra Unity'de **Bidwarss > Sync Market Catalog**. Kural hash'i değişir; yeni hash'i skor servisinin izin listesine ekle ve herkes aynı build'i kullansın. Aralığı elle girmek istersen katalog kaydında `minDollars` / `maxDollars` dizilerini doldur; boş bırakılan eşya eski yöntemle (`baseDollars` x genel yüzde bandı) fiyatlanır.
+Piyasayı değiştirmek için `Tools/items.json` kaydını düzenle (formül `Tools/market.py`'de), `python Tools/market.py` çalıştır (`Assets/Bidwarss/Data/ItemCatalog.json` yeniden yazılır), sonra Unity'de **Bidwarss > Sync Market Catalog**. Kural hash'i değişir; yeni hash'i skor servisinin izin listesine ekle ve herkes aynı build'i kullansın. Aralığı elle girmek istersen katalog kaydında `minDollars` / `maxDollars` dizilerini doldur; boş bırakılan eşya eski yöntemle (`baseDollars` x genel yüzde bandı) fiyatlanır.
 
 ## Kendi eşyalarını eklemek
 
-`GeneratedV2/ItemCatalog.asset` içindeki her kayıt: kalıcı ve benzersiz `key`, görünen `title`, `baseDollars`, koleksiyon puanı `collector`, durum fiyat aralıkları `minDollars`/`maxDollars`, seçim ağırlığı `selectionWeight`, en fazla onlu grup sayısı `maxGroups`, renk ve isteğe bağlı `visualPrefab`. Kayıtların çoğunu elle yazma: katalog `Bidwarss > Sync Market Catalog` ile `Data/ItemCatalog.json` dosyasından (Kasa Defteri sitesiyle aynı eşyalar, 59 tür) doldurulur; mevcut `visualPrefab` atamaların `key` eşleşirse korunur. Yeni eşya için önce `Tools/market.py` tablosuna satır ekle.
+`GeneratedV2/ItemCatalog.asset` içindeki her kayıt: kalıcı ve benzersiz `key`, görünen `title`, `baseDollars`, koleksiyon puanı `collector`, durum fiyat aralıkları `minDollars`/`maxDollars`, seçim ağırlığı `selectionWeight`, en fazla onlu grup sayısı `maxGroups`, renk ve isteğe bağlı `visualPrefab`. Kayıtların çoğunu elle yazma: katalog `Bidwarss > Sync Market Catalog` ile `Data/ItemCatalog.json` dosyasından (Kasa Defteri sitesiyle aynı eşyalar, 59 tür) doldurulur; mevcut `visualPrefab` atamaların `key` eşleşirse korunur. Yeni eşya için aşağıdaki **Yeni eşya akışı**nı kullan.
 
 Prefab sadece görseldir; NetworkObject/oynanış scripti ekleme. Çocuk collider'ları devre dışı bırakılır, görünüm taşıma hücresine otomatik ölçeklenir; gerçek etkileşim collider'ını oyun sağlar. Beş geçici ayna/masa/sandalye/radyo/lamba silueti model bağlanana kadar kullanılır. Durum ayrı renk mührü ile gösterilir; kendi modelinin malzemesi boyanmaz.
 
@@ -123,3 +123,16 @@ Depo verisi `.json.gz` olarak kayipsiz saklanir; editor kurucu okurken acar. Dah
 Ag protokolu kapilarin zaman bilgisini tasimak icin 3 oldu; tum oyuncular yeni build kullanmali.
 
 Dogrulama: `python -m pip install numpy` ardindan `python -m unittest discover -s Tests -p test_depot_layout.py -v`. Bu kontroller veri geometrisi uzerindedir; Unity Editor derlemesi, goruntu, fizik ve iki bilgisayarli oyun testi burada yapilmamistir.
+
+## Yeni eşya akışı (otomatik isimlendirme)
+
+Kasa Defteri'ne yeni eşya eklenince elle tablo düzenlemene gerek yok:
+
+1. Sitedeki `items` belgelerini bir klasöre (belge başına bir `.json`) ya da tek bir liste dosyasına dök.
+2. `python Tools/site_import.py <döküm>` çalıştır (`--dry-run` yalnız rapor verir). Betik her yeni ad için `Tools/naming.py` ile **telifsiz Türkçe başlık** ("Zippo Lighter" → "Metal çakmak"), **iyelikli hâl** ("metal çakmağı", ünlü sahip adı için), **kategori** ve **önizleme şekli** üretir; marka ve model kodları başlığa hiç girmez, çünkü başlık yalnızca sözlükteki Türkçe karşılıklardan kurulur. Yazım hataları ("cigarattes", "mashine"), Kiril harfli benzerler, bitişik yazımlar ("GASSTOVE") ve Türkçe adlar tolere edilir.
+3. Fiyat koruması: motosiklet 3000$ altına inemez (koleksiyon ≥ 5), 100 kg üstü araç 1500$ altına inemez; şüpheli ölçü/fiyat raporda `!` ile işaretlenir.
+4. Kayıt `Tools/items.json`'a `auto: true` ile eklenir. Raporda `!` ile "sözlükte yok" ya da "baş isim bulunamadı" çıkan eşyaları kontrol et: kaydı elle düzeltip `auto`yu sil, ya da sözlüğe kelime ekle (`naming.py` içindeki `HEADS`, `ADJS`, `NMODS`, `BRANDS`).
+5. `python Tools/market.py` ile oyun kataloğunu üret; betiğin yazdığı `site_updates/batch.json` ile sitedeki belgelere `classes`/`base`/`coll`/`priceReview: "market-v3"` yaz. Takma adlı (telifli adlı) site belgeleri kanonik adla yeniden adlandırılır.
+6. Unity'de **Bidwarss > Sync Market Catalog**, yeni kural hash'ini skor servisinin izin listesine ekle.
+
+Testler: `python Tools/test_market.py`, `python Tools/test_naming.py`.

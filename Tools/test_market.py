@@ -32,7 +32,7 @@ class MarketTests(unittest.TestCase):
 
     def test_every_item_has_a_possessed_form(self):
         keys = {r["key"] for r in market.catalog()}
-        self.assertEqual(keys, set(market.OWNED), "OWNED ile katalog anahtarlari ayni olmali")
+        self.assertEqual(keys, {i["key"] for i in market.load_items() if i["owned"]}, "OWNED ile katalog anahtarlari ayni olmali")
 
     def test_motorcycles_are_not_toys(self):
         by = {r["key"]: r for r in market.catalog()}

@@ -1,0 +1,598 @@
+{
+ "_comment": "Kasa Defteri itemlerinin oyun karsiligi. auto:true olanlari Tools/site_import.py uretti; elle duzeltmek icin auto'yu kaldir.",
+ "items": [
+  {
+   "name": "Vintage Wooden Wall Clock",
+   "key": "ahsap-duvar-saati",
+   "title": "Eski ahşap duvar saati",
+   "owned": "ahşap duvar saati",
+   "base": 150,
+   "coll": 4,
+   "cat": "clock",
+   "shape": "Box"
+  },
+  {
+   "name": "SPY-HYPERSPORT",
+   "key": "model-motosiklet",
+   "title": "Spor motosiklet",
+   "owned": "spor motosikleti",
+   "base": 4800,
+   "coll": 5,
+   "cat": "vehicle",
+   "shape": "Box"
+  },
+  {
+   "name": "Basic Clock Rigged",
+   "key": "basit-saat",
+   "title": "Basit masa saati",
+   "owned": "masa saati",
+   "base": 18,
+   "coll": 0,
+   "cat": "clock",
+   "shape": "Box"
+  },
+  {
+   "name": "VİNTAGE TABLE",
+   "key": "vintage-masa",
+   "title": "Vintage ahşap masa",
+   "owned": "vintage masası",
+   "base": 350,
+   "coll": 4,
+   "cat": "furniture",
+   "shape": "Table"
+  },
+  {
+   "name": "ZIL Buzdolabı (Sovyet)",
+   "key": "zil-buzdolabi",
+   "title": "ZIL buzdolabı (Sovyet)",
+   "owned": "buzdolabı",
+   "base": 250,
+   "coll": 4,
+   "cat": "kitchen",
+   "shape": "Box"
+  },
+  {
+   "name": "Antique Pepper Mill",
+   "key": "antika-biber-degirmeni",
+   "title": "Antika biber değirmeni",
+   "owned": "biber değirmeni",
+   "base": 90,
+   "coll": 4,
+   "cat": "kitchen",
+   "shape": "Box"
+  },
+  {
+   "name": "Wheel",
+   "key": "tekerlek",
+   "title": "Tekerlek",
+   "owned": "tekerleği",
+   "base": 20,
+   "coll": 0,
+   "cat": "tools",
+   "shape": "Box"
+  },
+  {
+   "name": "Retro bike",
+   "key": "retro-bisiklet",
+   "title": "Retro bisiklet",
+   "owned": "bisikleti",
+   "base": 220,
+   "coll": 3,
+   "cat": "vehicle",
+   "shape": "Box"
+  },
+  {
+   "name": "Brazilian Rum",
+   "key": "brezilya-romu",
+   "title": "Brezilya romu (şişe)",
+   "owned": "rom şişesi",
+   "base": 35,
+   "coll": 1,
+   "cat": "drink",
+   "shape": "Box"
+  },
+  {
+   "name": "Wooden Pipe",
+   "key": "ahsap-pipo",
+   "title": "Ahşap pipo",
+   "owned": "piposu",
+   "base": 40,
+   "coll": 3,
+   "cat": "decor",
+   "shape": "Box"
+  },
+  {
+   "name": "Flashlight",
+   "key": "el-feneri",
+   "title": "El feneri",
+   "owned": "el feneri",
+   "base": 8,
+   "coll": 0,
+   "cat": "tools",
+   "shape": "Box"
+  },
+  {
+   "name": "COFFEE MAKER 1",
+   "key": "kahve-makinesi",
+   "title": "Filtre kahve makinesi",
+   "owned": "kahve makinesi",
+   "base": 15,
+   "coll": 0,
+   "cat": "kitchen",
+   "shape": "Box"
+  },
+  {
+   "name": "Old Military Radio",
+   "key": "askeri-telsiz",
+   "title": "Eski askeri telsiz",
+   "owned": "askeri telsizi",
+   "base": 200,
+   "coll": 5,
+   "cat": "electronics",
+   "shape": "Radio"
+  },
+  {
+   "name": "walkie- talkie",
+   "key": "telsiz",
+   "title": "Telsiz (walkie-talkie)",
+   "owned": "telsizi",
+   "base": 15,
+   "coll": 1,
+   "cat": "electronics",
+   "shape": "Box"
+  },
+  {
+   "name": "Marquetry table",
+   "key": "marketri-masa",
+   "title": "Marketri (kakma) masa",
+   "owned": "marketri masası",
+   "base": 600,
+   "coll": 7,
+   "cat": "furniture",
+   "shape": "Table"
+  },
+  {
+   "name": "Japanese Sword",
+   "key": "japon-kilici",
+   "title": "Japon kılıcı",
+   "owned": "Japon kılıcı",
+   "base": 330,
+   "coll": 7,
+   "cat": "weapon",
+   "shape": "Box"
+  },
+  {
+   "name": "GASSTOVE",
+   "key": "gazli-ocak",
+   "title": "Gazlı ocak",
+   "owned": "gazlı ocağı",
+   "base": 90,
+   "coll": 1,
+   "cat": "kitchen",
+   "shape": "Box"
+  },
+  {
+   "name": "DJ set from ep6",
+   "key": "dj-seti",
+   "title": "DJ seti",
+   "owned": "DJ seti",
+   "base": 160,
+   "coll": 1,
+   "cat": "music",
+   "shape": "Box"
+  },
+  {
+   "name": "Electronic Drum Set",
+   "key": "elektronik-davul",
+   "title": "Elektronik davul seti",
+   "owned": "elektronik davul seti",
+   "base": 300,
+   "coll": 1,
+   "cat": "music",
+   "shape": "Box"
+  },
+  {
+   "name": "Document сabinet",
+   "key": "evrak-dolabi",
+   "title": "Evrak dolabı",
+   "owned": "evrak dolabı",
+   "base": 90,
+   "coll": 1,
+   "cat": "furniture",
+   "shape": "Box"
+  },
+  {
+   "name": "Espresso Coffee Machine",
+   "key": "espresso-makinesi",
+   "title": "Espresso makinesi",
+   "owned": "espresso makinesi",
+   "base": 60,
+   "coll": 1,
+   "cat": "kitchen",
+   "shape": "Box"
+  },
+  {
+   "name": "M9A3 Pistol",
+   "key": "m9a3-tabanca",
+   "title": "M9A3 tabanca (replika)",
+   "owned": "tabancası",
+   "base": 120,
+   "coll": 3,
+   "cat": "weapon",
+   "shape": "Box"
+  },
+  {
+   "name": "Katana",
+   "key": "katana",
+   "title": "Katana",
+   "owned": "katanası",
+   "base": 350,
+   "coll": 7,
+   "cat": "weapon",
+   "shape": "Box"
+  },
+  {
+   "name": "DISCO BALL",
+   "key": "disko-topu",
+   "title": "Disko topu",
+   "owned": "disko topu",
+   "base": 30,
+   "coll": 2,
+   "cat": "decor",
+   "shape": "Box"
+  },
+  {
+   "name": "Katana With Dragon",
+   "key": "ejderhali-katana",
+   "title": "Ejderhalı katana",
+   "owned": "ejderhalı katanası",
+   "base": 300,
+   "coll": 7,
+   "cat": "weapon",
+   "shape": "Box"
+  },
+  {
+   "name": "Leather Footstool",
+   "key": "deri-tabure",
+   "title": "Deri tabure",
+   "owned": "deri taburesi",
+   "base": 55,
+   "coll": 1,
+   "cat": "furniture",
+   "shape": "Box"
+  },
+  {
+   "name": "GAME READY ARCADE MACHINE ASSET",
+   "key": "arcade-makinesi",
+   "title": "Arcade oyun makinesi",
+   "owned": "arcade makinesi",
+   "base": 700,
+   "coll": 5,
+   "cat": "toy",
+   "shape": "Box"
+  },
+  {
+   "name": "Old Soviet Chair",
+   "key": "sovyet-sandalye",
+   "title": "Eski Sovyet sandalyesi",
+   "owned": "Sovyet sandalyesi",
+   "base": 45,
+   "coll": 3,
+   "cat": "furniture",
+   "shape": "Chair"
+  },
+  {
+   "name": "mumluk",
+   "key": "mumluk",
+   "title": "Pirinç mumluk",
+   "owned": "pirinç mumluğu",
+   "base": 50,
+   "coll": 4,
+   "cat": "decor",
+   "shape": "Box"
+  },
+  {
+   "name": "VİNTAGE PİSTOL",
+   "key": "vintage-tabanca",
+   "title": "Vintage tabanca",
+   "owned": "vintage tabancası",
+   "base": 400,
+   "coll": 6,
+   "cat": "weapon",
+   "shape": "Box"
+  },
+  {
+   "name": "Floral Vase",
+   "key": "cicekli-vazo",
+   "title": "Çiçek desenli vazo",
+   "owned": "çiçekli vazosu",
+   "base": 60,
+   "coll": 4,
+   "cat": "decor",
+   "shape": "Box"
+  },
+  {
+   "name": "Echo Wall Mirror",
+   "key": "duvar-aynasi",
+   "title": "Oymalı duvar aynası",
+   "owned": "duvar aynası",
+   "base": 150,
+   "coll": 4,
+   "cat": "decor",
+   "shape": "Mirror"
+  },
+  {
+   "name": "Radio V",
+   "key": "masaustu-radyo",
+   "title": "Masaüstü radyo",
+   "owned": "masaüstü radyosu",
+   "base": 90,
+   "coll": 4,
+   "cat": "electronics",
+   "shape": "Radio"
+  },
+  {
+   "name": "Grandfather Clock",
+   "key": "boy-saati",
+   "title": "Antika boy saati",
+   "owned": "boy saati",
+   "base": 600,
+   "coll": 7,
+   "cat": "clock",
+   "shape": "Box"
+  },
+  {
+   "name": "Vintage Gramophone",
+   "key": "gramofon",
+   "title": "Antika gramofon",
+   "owned": "gramofonu",
+   "base": 420,
+   "coll": 6,
+   "cat": "music",
+   "shape": "Box"
+  },
+  {
+   "name": "Weathered antique table mirror",
+   "key": "antika-masa-aynasi",
+   "title": "Antika masa aynası",
+   "owned": "masa aynası",
+   "base": 200,
+   "coll": 6,
+   "cat": "decor",
+   "shape": "Mirror"
+  },
+  {
+   "name": "Trash Can",
+   "key": "cop-kovasi",
+   "title": "Çöp kovası",
+   "owned": "çöp kovası",
+   "base": 10,
+   "coll": 0,
+   "cat": "tools",
+   "shape": "Box"
+  },
+  {
+   "name": "STYLIZED VENDING MASHINE HIGH-OPTIMIZED MODEL",
+   "key": "otomat",
+   "title": "Otomat (vending)",
+   "owned": "otomatı",
+   "base": 500,
+   "coll": 2,
+   "cat": "electronics",
+   "shape": "Box"
+  },
+  {
+   "name": "Vase Remake (OldArt)",
+   "key": "vazo-remake",
+   "title": "Antika görünümlü vazo (remake)",
+   "owned": "vazosu",
+   "base": 50,
+   "coll": 2,
+   "cat": "decor",
+   "shape": "Box"
+  },
+  {
+   "name": "Vase",
+   "key": "vazo",
+   "title": "Vazo",
+   "owned": "vazosu",
+   "base": 35,
+   "coll": 2,
+   "cat": "decor",
+   "shape": "Box"
+  },
+  {
+   "name": "Vintage Pocket Watch",
+   "key": "cep-saati",
+   "title": "Antika cep saati",
+   "owned": "cep saati",
+   "base": 250,
+   "coll": 7,
+   "cat": "clock",
+   "shape": "Box"
+  },
+  {
+   "name": "OLD CHINA CABINET",
+   "key": "cini-vitrin",
+   "title": "Antika çini vitrin",
+   "owned": "çini vitrini",
+   "base": 500,
+   "coll": 6,
+   "cat": "furniture",
+   "shape": "Box"
+  },
+  {
+   "name": "Lamba",
+   "key": "masa-lambasi",
+   "title": "Masa lambası",
+   "owned": "masa lambası",
+   "base": 80,
+   "coll": 3,
+   "cat": "decor",
+   "shape": "Lamp"
+  },
+  {
+   "name": "Zippo Lighter 1",
+   "key": "benzinli-cakmak",
+   "title": "Metal benzinli çakmak",
+   "owned": "çakmağı",
+   "base": 40,
+   "coll": 4,
+   "cat": "decor",
+   "shape": "Box"
+  },
+  {
+   "name": "Zippo Lighter 2",
+   "key": "benzinli-cakmak-2",
+   "title": "Metal benzinli çakmak (2)",
+   "owned": "çakmağı",
+   "base": 45,
+   "coll": 4,
+   "cat": "decor",
+   "shape": "Box"
+  },
+  {
+   "name": "candy machine",
+   "key": "seker-otomati",
+   "title": "Retro şeker otomatı",
+   "owned": "şeker otomatı",
+   "base": 650,
+   "coll": 6,
+   "cat": "electronics",
+   "shape": "Box"
+  },
+  {
+   "name": "Type-64 SMG",
+   "key": "hafif-makineli",
+   "title": "Sessiz hafif makineli (replika)",
+   "owned": "hafif makinelisi",
+   "base": 900,
+   "coll": 6,
+   "cat": "weapon",
+   "shape": "Box"
+  },
+  {
+   "name": "Dance Dance Revolution",
+   "key": "dans-arcade",
+   "title": "Dans arcade makinesi",
+   "owned": "dans makinesi",
+   "base": 900,
+   "coll": 5,
+   "cat": "toy",
+   "shape": "Box"
+  },
+  {
+   "name": "Coast Rush Arcade Cabinet",
+   "key": "yaris-arcade",
+   "title": "Yarış arcade makinesi",
+   "owned": "yarış arcade makinesi",
+   "base": 950,
+   "coll": 6,
+   "cat": "toy",
+   "shape": "Box",
+   "aliases": [
+    "OutRun Arcade Cabinet"
+   ]
+  },
+  {
+   "name": "bubblegum machine",
+   "key": "sakiz-makinesi",
+   "title": "Retro sakız makinesi",
+   "owned": "sakız makinesi",
+   "base": 200,
+   "coll": 5,
+   "cat": "toy",
+   "shape": "Box"
+  },
+  {
+   "name": "Vintage Rotary Telephone",
+   "key": "doner-telefon",
+   "title": "Döner kadranlı telefon",
+   "owned": "telefonu",
+   "base": 80,
+   "coll": 4,
+   "cat": "electronics",
+   "shape": "Box"
+  },
+  {
+   "name": "1911A1 Engraved",
+   "key": "gravurlu-1911",
+   "title": "Gravürlü 1911 tabanca",
+   "owned": "gravürlü tabancası",
+   "base": 650,
+   "coll": 7,
+   "cat": "weapon",
+   "shape": "Box"
+  },
+  {
+   "name": "Motorcycle",
+   "key": "cafe-racer",
+   "title": "Café racer motosiklet",
+   "owned": "motosikleti",
+   "base": 3500,
+   "coll": 6,
+   "cat": "vehicle",
+   "shape": "Box"
+  },
+  {
+   "name": "Vending Machine X",
+   "key": "modern-otomat",
+   "title": "Modern otomat",
+   "owned": "otomatı",
+   "base": 450,
+   "coll": 2,
+   "cat": "electronics",
+   "shape": "Box"
+  },
+  {
+   "name": "Tommy gun",
+   "key": "thompson",
+   "title": "Tommy tipi makineli tüfek",
+   "owned": "makineli tüfeği",
+   "base": 1200,
+   "coll": 8,
+   "cat": "weapon",
+   "shape": "Box"
+  },
+  {
+   "name": "cigarattes machine",
+   "key": "sigara-otomati",
+   "title": "Eski sigara otomatı",
+   "owned": "sigara otomatı",
+   "base": 800,
+   "coll": 7,
+   "cat": "electronics",
+   "shape": "Box"
+  },
+  {
+   "name": "Snack Master",
+   "key": "atistirmalik-otomati",
+   "title": "Atıştırmalık otomatı",
+   "owned": "atıştırmalık otomatı",
+   "base": 350,
+   "coll": 2,
+   "cat": "electronics",
+   "shape": "Box"
+  },
+  {
+   "name": "Arcade Retro",
+   "key": "retro-arcade",
+   "title": "Retro arcade makinesi",
+   "owned": "retro arcade makinesi",
+   "base": 800,
+   "coll": 5,
+   "cat": "toy",
+   "shape": "Box"
+  },
+  {
+   "name": "ice cold machine",
+   "key": "soda-otomati",
+   "title": "Eski soda otomatı",
+   "owned": "soda otomatı",
+   "base": 750,
+   "coll": 7,
+   "cat": "drink",
+   "shape": "Box"
+  }
+ ]
+}

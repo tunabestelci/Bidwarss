@@ -69,92 +69,20 @@ def selection(base, coll):
     return w, g
 
 
-# name = sitedeki (Kasa Defteri) item adi; yeni itemler icin site=None
-# (name, key, title, base, coll, cat, shape)
-ITEMS = [
-    ("Vintage Wooden Wall Clock", "ahsap-duvar-saati", "Eski ahşap duvar saati", 150, 4, "clock", "Box"),
-    ("SPY-HYPERSPORT", "model-motosiklet", "Spor motosiklet", 4800, 5, "vehicle", "Box"),
-    ("Basic Clock Rigged", "basit-saat", "Basit masa saati", 18, 0, "clock", "Box"),
-    ("VİNTAGE TABLE", "vintage-masa", "Vintage ahşap masa", 350, 4, "furniture", "Table"),
-    ("ZIL Buzdolabı (Sovyet)", "zil-buzdolabi", "ZIL buzdolabı (Sovyet)", 250, 4, "kitchen", "Box"),
-    ("Antique Pepper Mill", "antika-biber-degirmeni", "Antika biber değirmeni", 90, 4, "kitchen", "Box"),
-    ("Wheel", "tekerlek", "Tekerlek", 20, 0, "tools", "Box"),
-    ("Retro bike", "retro-bisiklet", "Retro bisiklet", 220, 3, "vehicle", "Box"),
-    ("Brazilian Rum", "brezilya-romu", "Brezilya romu (şişe)", 35, 1, "drink", "Box"),
-    ("Wooden Pipe", "ahsap-pipo", "Ahşap pipo", 40, 3, "decor", "Box"),
-    ("Flashlight", "el-feneri", "El feneri", 8, 0, "tools", "Box"),
-    ("COFFEE MAKER 1", "kahve-makinesi", "Filtre kahve makinesi", 15, 0, "kitchen", "Box"),
-    ("Old Military Radio", "askeri-telsiz", "Eski askeri telsiz", 200, 5, "electronics", "Radio"),
-    ("walkie- talkie", "telsiz", "Telsiz (walkie-talkie)", 15, 1, "electronics", "Box"),
-    ("Marquetry table", "marketri-masa", "Marketri (kakma) masa", 600, 7, "furniture", "Table"),
-    ("Japanese Sword", "japon-kilici", "Japon kılıcı", 330, 7, "weapon", "Box"),
-    ("GASSTOVE", "gazli-ocak", "Gazlı ocak", 90, 1, "kitchen", "Box"),
-    ("DJ set from ep6", "dj-seti", "DJ seti", 160, 1, "music", "Box"),
-    ("Electronic Drum Set", "elektronik-davul", "Elektronik davul seti", 300, 1, "music", "Box"),
-    ("Document сabinet", "evrak-dolabi", "Evrak dolabı", 90, 1, "furniture", "Box"),
-    ("Espresso Coffee Machine", "espresso-makinesi", "Espresso makinesi", 60, 1, "kitchen", "Box"),
-    ("M9A3 Pistol", "m9a3-tabanca", "M9A3 tabanca (replika)", 120, 3, "weapon", "Box"),
-    ("Katana", "katana", "Katana", 350, 7, "weapon", "Box"),
-    ("DISCO BALL", "disko-topu", "Disko topu", 30, 2, "decor", "Box"),
-    ("Katana With Dragon", "ejderhali-katana", "Ejderhalı katana", 300, 7, "weapon", "Box"),
-    ("Leather Footstool", "deri-tabure", "Deri tabure", 55, 1, "furniture", "Box"),
-    ("GAME READY ARCADE MACHINE ASSET", "arcade-makinesi", "Arcade oyun makinesi", 700, 5, "toy", "Box"),
-    ("Old Soviet Chair", "sovyet-sandalye", "Eski Sovyet sandalyesi", 45, 3, "furniture", "Chair"),
-    ("mumluk", "mumluk", "Pirinç mumluk", 50, 4, "decor", "Box"),
-    ("VİNTAGE PİSTOL", "vintage-tabanca", "Vintage tabanca", 400, 6, "weapon", "Box"),
-    ("Floral Vase", "cicekli-vazo", "Çiçek desenli vazo", 60, 4, "decor", "Box"),
-    ("Echo Wall Mirror", "duvar-aynasi", "Oymalı duvar aynası", 150, 4, "decor", "Mirror"),
-    ("Radio V", "masaustu-radyo", "Masaüstü radyo", 90, 4, "electronics", "Radio"),
-    ("Grandfather Clock", "boy-saati", "Antika boy saati", 600, 7, "clock", "Box"),
-    ("Vintage Gramophone", "gramofon", "Antika gramofon", 420, 6, "music", "Box"),
-    ("Weathered antique table mirror", "antika-masa-aynasi", "Antika masa aynası", 200, 6, "decor", "Mirror"),
-    ("Trash Can", "cop-kovasi", "Çöp kovası", 10, 0, "tools", "Box"),
-    ("STYLIZED VENDING MASHINE HIGH-OPTIMIZED MODEL", "otomat", "Otomat (vending)", 500, 2, "electronics", "Box"),
-    ("Vase Remake (OldArt)", "vazo-remake", "Antika görünümlü vazo (remake)", 50, 2, "decor", "Box"),
-    ("Vase", "vazo", "Vazo", 35, 2, "decor", "Box"),
-    ("Vintage Pocket Watch", "cep-saati", "Antika cep saati", 250, 7, "clock", "Box"),
-    ("OLD CHINA CABINET", "cini-vitrin", "Antika çini vitrin", 500, 6, "furniture", "Box"),
-    # Oyunda olup sitede olmayan:
-    ("Lamba", "masa-lambasi", "Masa lambası", 80, 3, "decor", "Lamp"),
-    # Sonradan sitede eklenenler (Ekim 2026):
-    ("Zippo Lighter 1", "benzinli-cakmak", "Metal benzinli çakmak", 40, 4, "decor", "Box"),
-    ("Zippo Lighter 2", "benzinli-cakmak-2", "Metal benzinli çakmak (2)", 45, 4, "decor", "Box"),
-    ("candy machine", "seker-otomati", "Retro şeker otomatı", 650, 6, "electronics", "Box"),
-    ("Type-64 SMG", "hafif-makineli", "Sessiz hafif makineli (replika)", 900, 6, "weapon", "Box"),
-    ("Dance Dance Revolution", "dans-arcade", "Dans arcade makinesi", 900, 5, "toy", "Box"),
-    ("Coast Rush Arcade Cabinet", "yaris-arcade", "Yarış arcade makinesi", 950, 6, "toy", "Box"),
-    ("bubblegum machine", "sakiz-makinesi", "Retro sakız makinesi", 200, 5, "toy", "Box"),
-    ("Vintage Rotary Telephone", "doner-telefon", "Döner kadranlı telefon", 80, 4, "electronics", "Box"),
-    ("1911A1 Engraved", "gravurlu-1911", "Gravürlü 1911 tabanca", 650, 7, "weapon", "Box"),
-    ("Motorcycle", "cafe-racer", "Café racer motosiklet", 3500, 6, "vehicle", "Box"),
-    ("Vending Machine X", "modern-otomat", "Modern otomat", 450, 2, "electronics", "Box"),
-    ("Tommy gun", "thompson", "Thompson tipi makineli tüfek", 1200, 8, "weapon", "Box"),
-    ("cigarattes machine", "sigara-otomati", "Eski sigara otomatı", 800, 7, "electronics", "Box"),
-    ("Snack Master", "atistirmalik-otomati", "Atıştırmalık otomatı", 350, 2, "electronics", "Box"),
-    ("Arcade Retro", "retro-arcade", "Retro arcade makinesi", 800, 5, "toy", "Box"),
-    ("ice cold machine", "soda-otomati", "Eski soda otomatı", 750, 7, "drink", "Box"),
-]
+HERE = os.path.dirname(os.path.abspath(__file__))
+ITEMS_FILE = os.path.join(HERE, "items.json")
 
-# "<Yildiz>'in <owned>" biciminde gosterilir (yalniz Cok iyi / Efsane esyalar). Kucuk harf, iyelik ekli.
-OWNED = {
-    "ahsap-duvar-saati": "ahşap duvar saati", "model-motosiklet": "spor motosikleti", "basit-saat": "masa saati",
-    "vintage-masa": "vintage masası", "zil-buzdolabi": "buzdolabı", "antika-biber-degirmeni": "biber değirmeni",
-    "tekerlek": "tekerleği", "retro-bisiklet": "bisikleti", "brezilya-romu": "rom şişesi", "ahsap-pipo": "piposu",
-    "el-feneri": "el feneri", "kahve-makinesi": "kahve makinesi", "askeri-telsiz": "askeri telsizi", "telsiz": "telsizi",
-    "marketri-masa": "marketri masası", "japon-kilici": "Japon kılıcı", "gazli-ocak": "gazlı ocağı", "dj-seti": "DJ seti",
-    "elektronik-davul": "elektronik davul seti", "evrak-dolabi": "evrak dolabı", "espresso-makinesi": "espresso makinesi",
-    "m9a3-tabanca": "tabancası", "katana": "katanası", "disko-topu": "disko topu", "ejderhali-katana": "ejderhalı katanası",
-    "deri-tabure": "deri taburesi", "arcade-makinesi": "arcade makinesi", "sovyet-sandalye": "Sovyet sandalyesi",
-    "mumluk": "pirinç mumluğu", "vintage-tabanca": "vintage tabancası", "cicekli-vazo": "çiçekli vazosu",
-    "duvar-aynasi": "duvar aynası", "masaustu-radyo": "masaüstü radyosu", "boy-saati": "boy saati", "gramofon": "gramofonu",
-    "antika-masa-aynasi": "masa aynası", "cop-kovasi": "çöp kovası", "otomat": "otomatı", "vazo-remake": "vazosu",
-    "vazo": "vazosu", "cep-saati": "cep saati", "cini-vitrin": "çini vitrini", "masa-lambasi": "masa lambası",
-    "benzinli-cakmak": "çakmağı", "benzinli-cakmak-2": "çakmağı", "seker-otomati": "şeker otomatı",
-    "hafif-makineli": "hafif makinelisi", "dans-arcade": "dans makinesi", "yaris-arcade": "yarış arcade makinesi",
-    "sakiz-makinesi": "sakız makinesi", "doner-telefon": "telefonu", "gravurlu-1911": "gravürlü tabancası",
-    "cafe-racer": "motosikleti", "modern-otomat": "otomatı", "thompson": "makineli tüfeği", "sigara-otomati": "sigara otomatı",
-    "atistirmalik-otomati": "atıştırmalık otomatı", "retro-arcade": "retro arcade makinesi", "soda-otomati": "soda otomatı",
-}
+
+def load_items(path=ITEMS_FILE):
+    """Tools/items.json: her kayit {name, key, title, owned, base, coll, cat, shape[, aliases][, auto]}.
+    Yeni siteler icin Tools/site_import.py bu dosyaya otomatik kayit ekler."""
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)["items"]
+
+
+def item_tuples():
+    return [(i["name"], i["key"], i["title"], i["base"], i["coll"], i["cat"], i["shape"]) for i in load_items()]
+
 
 # Sitede olmayan itemlerin sabit olculeri (kg, boy, en, derinlik cm)
 NEW_ITEM_DIMS = {"Lamba": (2.5, 45, 30, 30)}
@@ -162,12 +90,13 @@ NEW_ITEM_DIMS = {"Lamba": (2.5, 45, 30, 30)}
 
 def catalog():
     rows = []
-    for name, key, title, base, coll, cat, shape in ITEMS:
+    owned = {i["key"]: i["owned"] for i in load_items()}
+    for name, key, title, base, coll, cat, shape in item_tuples():
         b = bands(base, coll)
         w, g = selection(base, coll)
         rows.append({
             "name": name, "key": key, "title": title, "baseDollars": base, "collector": coll,
-            "owned": OWNED[key], "selectionWeight": w, "maxGroups": g, "color": COLORS[cat], "shape": shape,
+            "owned": owned[key], "selectionWeight": w, "maxGroups": g, "color": COLORS[cat], "shape": shape,
             "minDollars": [x[0] for x in b], "maxDollars": [x[1] for x in b],
         })
     return rows
