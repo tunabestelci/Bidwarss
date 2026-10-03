@@ -1,0 +1,8 @@
+{
+  "name": "bidwarss-bruno-preview",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": { "build": "esbuild preview.js --bundle --minify --outfile=preview.bundle.js && python3 package_preview.py" },
+  "dependencies": { "three": "0.170.0" },
+  "devDependencies": { "esbuild": "0.24.0" }
+}

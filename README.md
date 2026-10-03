@@ -119,3 +119,9 @@ Depo verisi `.json.gz` olarak kayipsiz saklanir; editor kurucu okurken acar. Dah
 Ag protokolu kapilarin zaman bilgisini tasimak icin 3 oldu; tum oyuncular yeni build kullanmali.
 
 Dogrulama: `python -m pip install numpy` ardindan `python -m unittest discover -s Tests -p test_depot_layout.py -v`. Bu kontroller veri geometrisi uzerindedir; Unity Editor derlemesi, goruntu, fizik ve iki bilgisayarli oyun testi burada yapilmamistir.
+
+## Bruno karakteri
+
+Özgün 3D karakter, yedi animasyon, göz kırpma, cel shader ve birinci şahıs elleri eklendi. **Bidwarss > Bruno > Open Character Preview** ile inceleyin. [Kurulum, bağımsız 3D önizleme ve doğrulama notları](Documentation/Bruno/README.md). Unity Editor/Play Mode testi bu ortamda yapılmadı.
+
+Bruno v2: ele bağlı eşya taşıma, kol IK, maket bıçağı/çivi sökücü ve sunucu kontrollü açma aşamaları. Host ve istemciler protokol 4 sürümünü birlikte kurmalıdır.

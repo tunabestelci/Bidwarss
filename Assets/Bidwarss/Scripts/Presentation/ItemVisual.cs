@@ -9,6 +9,9 @@ namespace Bidwarss
         Renderer[] renderers;
         ItemLocation previous;
         bool positioned;
+        public Bounds ModelBounds { get; private set; }
+        Vector3 pickupOrigin;
+        float pickupTime=-1;
         public static readonly Color[] ConditionColors={
             new Color(.44f,.35f,.3f),new Color(.63f,.38f,.27f),new Color(.85f,.57f,.22f),
             new Color(.85f,.87f,.9f),new Color(.32f,.85f,.5f),new Color(.3f,.65f,1),new Color(1,.76f,.18f)};
@@ -40,6 +43,12 @@ namespace Bidwarss
             // The colored seal communicates condition without recoloring the user's artwork.
             Part(art,"Condition seal",new Vector3(.16f,-.12f,-.185f),new Vector3(.07f,.08f,.025f),ConditionColors[(int)state.condition],material);
             visual.renderers=go.GetComponentsInChildren<Renderer>();
+            var combined=new Bounds(Vector3.zero,Vector3.zero);bool first=true;
+            foreach(var renderer in visual.renderers)
+            {
+                if(first){combined=renderer.bounds;first=false;}else combined.Encapsulate(renderer.bounds);
+            }
+            visual.ModelBounds=combined;
             return visual;
         }
         static void BuildSample(Transform root,ItemCatalog.SampleShape shape,Color color,Material mat)
@@ -81,8 +90,10 @@ namespace Bidwarss
             transform.localScale=Vector3.one*scale;
             bool held=state.location==ItemLocation.Held;
             hitbox.enabled=!held;
-            bool snap=!positioned||previous!=state.location||!held;
-            transform.SetPositionAndRotation(snap?position:Vector3.Lerp(transform.position,position,1-Mathf.Exp(-22*Time.deltaTime)),rotation);
+            if(held && positioned && previous!=ItemLocation.Held){pickupOrigin=transform.position;pickupTime=Time.time;}
+            bool arriving=held && positioned && Time.time-pickupTime<.14f;
+            float t=Mathf.SmoothStep(0,1,(Time.time-pickupTime)/.14f);
+            transform.SetPositionAndRotation(arriving?Vector3.Lerp(pickupOrigin,position,t):position,rotation);
             positioned=true;previous=state.location;
         }
     }

@@ -1,0 +1,16 @@
+{
+  "vertices": 19564,
+  "triangles": 38436,
+  "bones": 18,
+  "materials": 17,
+  "clips": [
+    "Idle",
+    "Walk",
+    "CarryIdle",
+    "CarryWalk",
+    "Greet",
+    "BoxCut",
+    "Pry"
+  ],
+  "height_m": 2.189
+}
