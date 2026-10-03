@@ -17,6 +17,7 @@ namespace Bidwarss
         public int stackIndex;
         public int crate;
         public int dollars;
+        public int star; // Provenance owner id, -1 for none
         public ItemCondition condition;
         public ItemLocation location;
 
@@ -31,13 +32,14 @@ namespace Bidwarss
             serializer.SerializeValue(ref stackIndex);
             serializer.SerializeValue(ref crate);
             serializer.SerializeValue(ref dollars);
+            serializer.SerializeValue(ref star);
             serializer.SerializeValue(ref condition);
             serializer.SerializeValue(ref location);
         }
 
         public bool Equals(ItemState other) => id == other.id && kind == other.kind &&
             position.Equals(other.position) && yaw.Equals(other.yaw) && holder == other.holder && slot == other.slot &&
-            stackIndex == other.stackIndex && crate == other.crate && dollars == other.dollars && condition == other.condition && location == other.location;
+            stackIndex == other.stackIndex && crate == other.crate && dollars == other.dollars && star == other.star && condition == other.condition && location == other.location;
     }
 
     public struct CrateState : INetworkSerializable, IEquatable<CrateState>

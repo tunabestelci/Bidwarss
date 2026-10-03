@@ -12,6 +12,8 @@ namespace Bidwarss
         {
             public string key;
             public string title;
+            [Tooltip("Possessed form for epic/legendary finds: 'Mira Starling'in Motosikleti' needs 'motosikleti'.")]
+            public string owned;
             [Min(1)] public int baseDollars = 100;
             [Range(1,1000)] public int selectionWeight = 1;
             [Range(1,30)] public int maxGroups = 5;
@@ -26,6 +28,12 @@ namespace Bidwarss
         }
         public enum SampleShape { Box, Mirror, Table, Chair, Radio, Lamp }
         public Entry[] entries;
+        // Name shown for a concrete item: the famous previous owner replaces the plain title when there is one.
+        public string DisplayTitle(int kind, int star)
+        {
+            var entry = entries[kind];
+            return star >= 0 && !string.IsNullOrWhiteSpace(entry.owned) ? Provenance.Title(entry.owned, star) : entry.title;
+        }
         public ConditionRule[] conditions = GameRules.DefaultConditions();
         public GameRules CreateRules(int crates, int groups) => new GameRules {
             crateCount = crates, totalGroups = groups, conditions = conditions,

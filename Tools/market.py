@@ -73,7 +73,7 @@ def selection(base, coll):
 # (name, key, title, base, coll, cat, shape)
 ITEMS = [
     ("Vintage Wooden Wall Clock", "ahsap-duvar-saati", "Eski ahşap duvar saati", 150, 4, "clock", "Box"),
-    ("SPY-HYPERSPORT", "model-motosiklet", "Model spor motosiklet", 35, 2, "toy", "Box"),
+    ("SPY-HYPERSPORT", "model-motosiklet", "Spor motosiklet", 4800, 5, "vehicle", "Box"),
     ("Basic Clock Rigged", "basit-saat", "Basit masa saati", 18, 0, "clock", "Box"),
     ("VİNTAGE TABLE", "vintage-masa", "Vintage ahşap masa", 350, 4, "furniture", "Table"),
     ("ZIL Buzdolabı (Sovyet)", "zil-buzdolabi", "ZIL buzdolabı (Sovyet)", 250, 4, "kitchen", "Box"),
@@ -116,7 +116,46 @@ ITEMS = [
     ("OLD CHINA CABINET", "cini-vitrin", "Antika çini vitrin", 500, 6, "furniture", "Box"),
     # Oyunda olup sitede olmayan:
     ("Lamba", "masa-lambasi", "Masa lambası", 80, 3, "decor", "Lamp"),
+    # Sonradan sitede eklenenler (Ekim 2026):
+    ("Zippo Lighter 1", "benzinli-cakmak", "Metal benzinli çakmak", 40, 4, "decor", "Box"),
+    ("Zippo Lighter 2", "benzinli-cakmak-2", "Metal benzinli çakmak (2)", 45, 4, "decor", "Box"),
+    ("candy machine", "seker-otomati", "Retro şeker otomatı", 650, 6, "electronics", "Box"),
+    ("Type-64 SMG", "hafif-makineli", "Sessiz hafif makineli (replika)", 900, 6, "weapon", "Box"),
+    ("Dance Dance Revolution", "dans-arcade", "Dans arcade makinesi", 900, 5, "toy", "Box"),
+    ("Coast Rush Arcade Cabinet", "yaris-arcade", "Yarış arcade makinesi", 950, 6, "toy", "Box"),
+    ("bubblegum machine", "sakiz-makinesi", "Retro sakız makinesi", 200, 5, "toy", "Box"),
+    ("Vintage Rotary Telephone", "doner-telefon", "Döner kadranlı telefon", 80, 4, "electronics", "Box"),
+    ("1911A1 Engraved", "gravurlu-1911", "Gravürlü 1911 tabanca", 650, 7, "weapon", "Box"),
+    ("Motorcycle", "cafe-racer", "Café racer motosiklet", 3500, 6, "vehicle", "Box"),
+    ("Vending Machine X", "modern-otomat", "Modern otomat", 450, 2, "electronics", "Box"),
+    ("Tommy gun", "thompson", "Thompson tipi makineli tüfek", 1200, 8, "weapon", "Box"),
+    ("cigarattes machine", "sigara-otomati", "Eski sigara otomatı", 800, 7, "electronics", "Box"),
+    ("Snack Master", "atistirmalik-otomati", "Atıştırmalık otomatı", 350, 2, "electronics", "Box"),
+    ("Arcade Retro", "retro-arcade", "Retro arcade makinesi", 800, 5, "toy", "Box"),
+    ("ice cold machine", "soda-otomati", "Eski soda otomatı", 750, 7, "drink", "Box"),
 ]
+
+# "<Yildiz>'in <owned>" biciminde gosterilir (yalniz Cok iyi / Efsane esyalar). Kucuk harf, iyelik ekli.
+OWNED = {
+    "ahsap-duvar-saati": "ahşap duvar saati", "model-motosiklet": "spor motosikleti", "basit-saat": "masa saati",
+    "vintage-masa": "vintage masası", "zil-buzdolabi": "buzdolabı", "antika-biber-degirmeni": "biber değirmeni",
+    "tekerlek": "tekerleği", "retro-bisiklet": "bisikleti", "brezilya-romu": "rom şişesi", "ahsap-pipo": "piposu",
+    "el-feneri": "el feneri", "kahve-makinesi": "kahve makinesi", "askeri-telsiz": "askeri telsizi", "telsiz": "telsizi",
+    "marketri-masa": "marketri masası", "japon-kilici": "Japon kılıcı", "gazli-ocak": "gazlı ocağı", "dj-seti": "DJ seti",
+    "elektronik-davul": "elektronik davul seti", "evrak-dolabi": "evrak dolabı", "espresso-makinesi": "espresso makinesi",
+    "m9a3-tabanca": "tabancası", "katana": "katanası", "disko-topu": "disko topu", "ejderhali-katana": "ejderhalı katanası",
+    "deri-tabure": "deri taburesi", "arcade-makinesi": "arcade makinesi", "sovyet-sandalye": "Sovyet sandalyesi",
+    "mumluk": "pirinç mumluğu", "vintage-tabanca": "vintage tabancası", "cicekli-vazo": "çiçekli vazosu",
+    "duvar-aynasi": "duvar aynası", "masaustu-radyo": "masaüstü radyosu", "boy-saati": "boy saati", "gramofon": "gramofonu",
+    "antika-masa-aynasi": "masa aynası", "cop-kovasi": "çöp kovası", "otomat": "otomatı", "vazo-remake": "vazosu",
+    "vazo": "vazosu", "cep-saati": "cep saati", "cini-vitrin": "çini vitrini", "masa-lambasi": "masa lambası",
+    "benzinli-cakmak": "çakmağı", "benzinli-cakmak-2": "çakmağı", "seker-otomati": "şeker otomatı",
+    "hafif-makineli": "hafif makinelisi", "dans-arcade": "dans makinesi", "yaris-arcade": "yarış arcade makinesi",
+    "sakiz-makinesi": "sakız makinesi", "doner-telefon": "telefonu", "gravurlu-1911": "gravürlü tabancası",
+    "cafe-racer": "motosikleti", "modern-otomat": "otomatı", "thompson": "makineli tüfeği", "sigara-otomati": "sigara otomatı",
+    "atistirmalik-otomati": "atıştırmalık otomatı", "retro-arcade": "retro arcade makinesi", "soda-otomati": "soda otomatı",
+}
+
 # Sitede olmayan itemlerin sabit olculeri (kg, boy, en, derinlik cm)
 NEW_ITEM_DIMS = {"Lamba": (2.5, 45, 30, 30)}
 
@@ -128,7 +167,7 @@ def catalog():
         w, g = selection(base, coll)
         rows.append({
             "name": name, "key": key, "title": title, "baseDollars": base, "collector": coll,
-            "selectionWeight": w, "maxGroups": g, "color": COLORS[cat], "shape": shape,
+            "owned": OWNED[key], "selectionWeight": w, "maxGroups": g, "color": COLORS[cat], "shape": shape,
             "minDollars": [x[0] for x in b], "maxDollars": [x[1] for x in b],
         })
     return rows
@@ -144,6 +183,7 @@ def validate(rows):
             assert 1 <= lo <= hi <= 1_000_000, r["key"]
             assert lo > prev, (r["key"], "bantlar kesisiyor")
             prev = hi
+        assert r["owned"].strip(), (r["key"], "owned bos")
         o = CONDITIONS.index("Orta")
         assert r["minDollars"][o] <= r["baseDollars"] <= r["maxDollars"][o], r["key"]
     assert sum(WEIGHTS) == 100
@@ -151,7 +191,7 @@ def validate(rows):
 
 def game_json(rows):
     return {
-        "version": 2,
+        "version": 3,
         "conditions": [{"name": n, "weight": w} for n, w in zip(CONDITIONS, WEIGHTS)],
         "items": [{k: v for k, v in r.items() if k != "name"} for r in rows],
     }

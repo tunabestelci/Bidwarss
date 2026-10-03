@@ -53,11 +53,13 @@ Aralıkları `Tools/market.py` üretir ve eşyanın **koleksiyon puanı** (0–1
 
 Durum çıkma ağırlıkları tüm eşyalar için ortaktır: Rezalet 8, Çok kötü 14, Kötü 20, Orta 27, İyi 18, Çok iyi 10, Efsane 3. Katalog 64 türe kadar çıkabilir; bir depoda 12 tür kullanılır. Türler `selectionWeight` ağırlığıyla seçilir (sıradan eşya sık, pahalı koleksiyon parçası seyrek), koleksiyon parçaları `maxGroups` ile 1–2 istifle sınırlıdır.
 
+**Ünlü sahip.** Oyunda *Çok iyi* (destansı) ve *Efsane* çıkan her eşya tanınmış birine ait bir parçadır ve bu yüzden değerlidir: ipucu metninde "Naz Kestrel'in Spor Motosikleti" gibi görünür. Sahipler uydurma sahne isimleridir (`Domain/Provenance.cs`, 576 kombinasyon); seçim tur tohumundan ve eşya numarasından türetilir, fiyatı ve rastgele akışı etkilemez, yalnız oyunda görünür (sitede yok). Eşyanın iyelikli hâli `Tools/market.py` içindeki `OWNED` tablosundan gelir (`owned` alanı).
+
 Piyasayı değiştirmek için `Tools/market.py` içindeki tabloyu düzenle, `python Tools/market.py` çalıştır (`Assets/Bidwarss/Data/ItemCatalog.json` yeniden yazılır), sonra Unity'de **Bidwarss > Sync Market Catalog**. Kural hash'i değişir; yeni hash'i skor servisinin izin listesine ekle ve herkes aynı build'i kullansın. Aralığı elle girmek istersen katalog kaydında `minDollars` / `maxDollars` dizilerini doldur; boş bırakılan eşya eski yöntemle (`baseDollars` x genel yüzde bandı) fiyatlanır.
 
 ## Kendi eşyalarını eklemek
 
-`GeneratedV2/ItemCatalog.asset` içindeki her kayıt: kalıcı ve benzersiz `key`, görünen `title`, `baseDollars`, koleksiyon puanı `collector`, durum fiyat aralıkları `minDollars`/`maxDollars`, seçim ağırlığı `selectionWeight`, en fazla onlu grup sayısı `maxGroups`, renk ve isteğe bağlı `visualPrefab`. Kayıtların çoğunu elle yazma: katalog `Bidwarss > Sync Market Catalog` ile `Data/ItemCatalog.json` dosyasından (Kasa Defteri sitesiyle aynı 43 eşya) doldurulur; mevcut `visualPrefab` atamaların `key` eşleşirse korunur. Yeni eşya için önce `Tools/market.py` tablosuna satır ekle.
+`GeneratedV2/ItemCatalog.asset` içindeki her kayıt: kalıcı ve benzersiz `key`, görünen `title`, `baseDollars`, koleksiyon puanı `collector`, durum fiyat aralıkları `minDollars`/`maxDollars`, seçim ağırlığı `selectionWeight`, en fazla onlu grup sayısı `maxGroups`, renk ve isteğe bağlı `visualPrefab`. Kayıtların çoğunu elle yazma: katalog `Bidwarss > Sync Market Catalog` ile `Data/ItemCatalog.json` dosyasından (Kasa Defteri sitesiyle aynı eşyalar, 59 tür) doldurulur; mevcut `visualPrefab` atamaların `key` eşleşirse korunur. Yeni eşya için önce `Tools/market.py` tablosuna satır ekle.
 
 Prefab sadece görseldir; NetworkObject/oynanış scripti ekleme. Çocuk collider'ları devre dışı bırakılır, görünüm taşıma hücresine otomatik ölçeklenir; gerçek etkileşim collider'ını oyun sağlar. Beş geçici ayna/masa/sandalye/radyo/lamba silueti model bağlanana kadar kullanılır. Durum ayrı renk mührü ile gösterilir; kendi modelinin malzemesi boyanmaz.
 

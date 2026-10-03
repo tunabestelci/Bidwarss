@@ -39,6 +39,7 @@ public static class DomainTests
             var item=market.items[k];int coll=elements[k].GetProperty("collector").GetInt32();
             int mid,midMax;market.PriceBand(k,ItemCondition.Average,out mid,out midMax);
             Check(mid<=item.baseDollars&&item.baseDollars<=midMax,"Average condition brackets the market value: "+item.key);
+            Check(!string.IsNullOrWhiteSpace(elements[k].GetProperty("owned").GetString()),"Every item has a possessed form for famous owners: "+item.key);
             int topMin,topMax,bottomMax,bottomMin;
             market.PriceBand(k,ItemCondition.Legendary,out topMin,out topMax);market.PriceBand(k,ItemCondition.Terrible,out bottomMin,out bottomMax);
             Check(bottomMax<mid,"Terrible is cheaper than Average: "+item.key);
@@ -83,6 +84,43 @@ public static class DomainTests
         threw=false;try{short6.Validate();}catch(ArgumentException){threw=true;}Check(threw,"Incomplete market rejected");
         var repriced=MarketRules(out json);repriced.items[2].maxDollars[6]+=10;
         Check(repriced.Fingerprint()!=market.Fingerprint(),"Repricing changes the rules hash");
+    }
+    static void ProvenanceTests()
+    {
+        Check(!Provenance.Applies(ItemCondition.Good)&&Provenance.Applies(ItemCondition.VeryGood)&&Provenance.Applies(ItemCondition.Legendary),"Only epic and legendary finds get a famous owner");
+        Check(Provenance.Pick(5,3,ItemCondition.Average)==Provenance.None,"Ordinary condition has no owner");
+        var names=new HashSet<string>();
+        for(int i=0;i<Provenance.NameCount;i++){var n=Provenance.Owner(i);Check(n.Length>3&&names.Add(n),"Owner names are unique: "+n);}
+        Check(Provenance.Owner(-1)==""&&Provenance.Owner(Provenance.NameCount)=="","Out-of-range owner is empty");
+        // Turkish genitive: vowel harmony and the buffer n after a final vowel.
+        Check(Provenance.Genitive("Mira Starling")=="Mira Starling'in","Genitive i -> in");
+        Check(Provenance.Genitive("Luna Kozmo")=="Luna Kozmo'nun","Genitive o + final vowel -> nun");
+        Check(Provenance.Genitive("Naz Cascade")=="Naz Cascade'nin","Genitive e + final vowel -> nin");
+        Check(Provenance.Genitive("Bora Halcyon")=="Bora Halcyon'un","Genitive o -> un");
+        Check(Provenance.Genitive("Selin Aurelio")=="Selin Aurelio'nun","Genitive trailing o -> nun");
+        Check(Provenance.Genitive("Ayla Karaman")=="Ayla Karaman'ın","Genitive a -> ın");
+        Check(Provenance.Genitive("Deniz Yüce")=="Deniz Yüce'nin","Genitive ü/e -> nin");
+        Check(Provenance.Genitive("Deniz Yüz")=="Deniz Yüz'ün","Genitive ü -> ün");
+        string t=Provenance.Title("spor motosikleti",0);
+        Check(t==Provenance.Genitive(Provenance.Owner(0))+" Spor Motosikleti","Title joins owner and possessed item: "+t);
+        Check(Provenance.Title("ışık lambası",0).EndsWith(" Işık Lambası"),"Turkish capital I");
+        Check(Provenance.Title("iğne kutusu",0).EndsWith(" İğne Kutusu"),"Turkish capital İ");
+        Check(Provenance.Title("",3)==""&&Provenance.Title("x",-1)=="x","Missing owner or form falls back");
+        // In a round: only epic/legendary items carry an owner, deterministically, and the draw does not disturb the economy.
+        var rules=Rules();int stars=0;var owners=new HashSet<int>();
+        for(int seed=0;seed<300;seed++)
+        {
+            var a=new RoundEngine(rules,seed);var b=new RoundEngine(rules,seed);
+            for(int i=0;i<a.Items.Count;i++)
+            {
+                var x=a.Items[i];
+                Check(x.star==b.Items[i].star,"Same seed, same owners");
+                if(x.condition>=ItemCondition.VeryGood){Check(x.star>=0&&x.star<Provenance.NameCount,"Epic/legendary item has an owner");stars++;owners.Add(x.star);}
+                else Check(x.star==Provenance.None,"Ordinary item has no owner");
+            }
+        }
+        Check(stars>2000,"Epic and legendary finds appear: "+stars);
+        Check(owners.Count>100,"Owners vary across rounds: "+owners.Count);
     }
     public static void Main()
     {
@@ -150,6 +188,7 @@ public static class DomainTests
         var changed=Rules();changed.items[0].baseDollars++;
         Check(changed.Fingerprint()!=rules.Fingerprint(),"Changed balance uses different ranking board");
         MarketTests();
+        ProvenanceTests();
         Console.WriteLine("PASS: "+checks+" assertions; 2000 generated scenarios; inventory, races, completion, pricing and limits.");
     }
 }

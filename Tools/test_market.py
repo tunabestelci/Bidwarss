@@ -30,6 +30,24 @@ class MarketTests(unittest.TestCase):
         self.assertGreaterEqual(by["vintage-masa"]["minDollars"][6], 1500)
         self.assertLessEqual(by["cop-kovasi"]["maxDollars"][6], 8 * by["cop-kovasi"]["baseDollars"])
 
+    def test_every_item_has_a_possessed_form(self):
+        keys = {r["key"] for r in market.catalog()}
+        self.assertEqual(keys, set(market.OWNED), "OWNED ile katalog anahtarlari ayni olmali")
+
+    def test_motorcycles_are_not_toys(self):
+        by = {r["key"]: r for r in market.catalog()}
+        # Gercek motosikletler (model/oyuncak degil): bir bisikletten ve tum ev esyalarindan pahali olmali.
+        for key in ("model-motosiklet", "cafe-racer"):
+            self.assertGreaterEqual(by[key]["baseDollars"], 3000, key)
+            self.assertGreater(by[key]["minDollars"][0], by["retro-bisiklet"]["baseDollars"], key)
+        self.assertGreater(by["model-motosiklet"]["minDollars"][6], 30000)
+
+    def test_new_machines_are_priced_as_collectibles(self):
+        by = {r["key"]: r for r in market.catalog()}
+        self.assertGreater(by["yaris-arcade"]["baseDollars"], by["arcade-makinesi"]["baseDollars"])
+        self.assertGreater(by["thompson"]["minDollars"][6], 20000)
+        self.assertGreater(by["sigara-otomati"]["baseDollars"], by["modern-otomat"]["baseDollars"])
+
 
 if __name__ == "__main__":
     unittest.main()

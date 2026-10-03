@@ -7,6 +7,7 @@ namespace Bidwarss.Domain
     {
         public const ulong Nobody = ulong.MaxValue;
         public int id, kind, crate, dollars, stack = -1, stackIndex = -1;
+        public int star = Provenance.None; // famous previous owner of an epic/legendary find (cosmetic)
         public ItemCondition condition;
         public ItemLocation location;
         public ulong holder = Nobody;
@@ -98,7 +99,8 @@ namespace Bidwarss.Domain
             }
             random.Shuffle(items); random.Shuffle(stackTypes);
             stackKinds = stackTypes.ToArray(); stackCounts = new int[stackKinds.Length]; opened = new bool[rules.crateCount];
-            for (int i = 0; i < items.Count; i++) { items[i].id = i; items[i].crate = i % rules.crateCount; }
+            for (int i = 0; i < items.Count; i++)
+            { items[i].id = i; items[i].crate = i % rules.crateCount; items[i].star = Provenance.Pick(seed, i, items[i].condition); }
         }
 
         public int HeldCount(ulong player, out int kind)

@@ -15,7 +15,7 @@ namespace Bidwarss.Editor
         [Serializable] sealed class ConditionData { public string name; public int weight; }
         [Serializable] sealed class ItemData
         {
-            public string key, title, color, shape;
+            public string key, title, owned, color, shape;
             public int baseDollars, collector, selectionWeight, maxGroups;
             public int[] minDollars, maxDollars;
         }
@@ -48,7 +48,7 @@ namespace Bidwarss.Editor
                 if (!Enum.TryParse<ItemCatalog.SampleShape>(item.shape, out shape)) shape = ItemCatalog.SampleShape.Box;
                 return new ItemCatalog.Entry
                 {
-                    key = item.key, title = item.title, baseDollars = item.baseDollars, collector = item.collector,
+                    key = item.key, title = item.title, owned = item.owned, baseDollars = item.baseDollars, collector = item.collector,
                     selectionWeight = item.selectionWeight, maxGroups = item.maxGroups,
                     minDollars = (int[])item.minDollars.Clone(), maxDollars = (int[])item.maxDollars.Clone(),
                     color = color, sampleShape = shape, visualPrefab = old != null ? old.visualPrefab : null

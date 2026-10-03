@@ -115,7 +115,7 @@ namespace Bidwarss
             }
             if(target.id<0 || target.id>=Items.Count)return "";
             var item=Items[target.id];
-            return "E: Al • "+catalog.entries[item.kind].title+" • "+GameRules.ConditionNames[(int)item.condition]+" • $"+item.dollars;
+            return "E: Al • "+catalog.DisplayTitle(item.kind,item.star)+" • "+GameRules.ConditionNames[(int)item.condition]+" • $"+item.dollars;
         }
         void Update()
         {
@@ -183,7 +183,7 @@ namespace Bidwarss
         {
             bool sealedItem=item.location==ItemLocation.Sealed;
             return new ItemState { id=item.id,kind=sealedItem?-1:item.kind,crate=item.crate,
-                condition=sealedItem?ItemCondition.Terrible:item.condition,dollars=sealedItem?0:item.dollars,
+                condition=sealedItem?ItemCondition.Terrible:item.condition,dollars=sealedItem?0:item.dollars,star=sealedItem?Provenance.None:item.star,
                 location=item.location,holder=item.holder,slot=item.stack,stackIndex=item.stackIndex,position=position };
         }
         void PublishProgress()
