@@ -19,6 +19,7 @@ namespace Bidwarss
         CharacterController motor;
         Vector2 serverMove;
         float yaw,pitch,serverPitch,verticalSpeed,nextSend,lastInput,nextAction;
+        public float ViewYaw => yaw;
         int wantedCrate=-1;
         public int WantsCrate => wantedCrate;
         public bool InputFresh => Time.unscaledTime-lastInput < .3f;
@@ -42,14 +43,14 @@ namespace Bidwarss
                 if(body!=null)body.gameObject.SetActive(false);
             }
             var avatar=new GameObject("Warehouse worker");avatar.transform.SetParent(transform,false);
-            avatar.AddComponent<WarehouseAvatar>().Initialize(this,avatarMaterial);
-            avatar.SetActive(!IsOwner);
+            var worker=avatar.AddComponent<WarehouseAvatar>();
+            worker.Initialize(this,avatarMaterial);
+            worker.SetFirstPerson(IsOwner);
             if(!IsOwner)return;
             Local=this; yaw=transform.eulerAngles.y; if(body!=null)body.gameObject.SetActive(false);
             var go=new GameObject("Local camera",typeof(Camera),typeof(AudioListener));
             go.tag="MainCamera";
-            go.transform.SetParent(transform,false); go.transform.localPosition=Vector3.up*1.55f;
-            go.AddComponent<WarehouseHands>().Initialize(this,avatarMaterial);
+            go.transform.SetParent(transform,false); go.transform.localPosition=new Vector3(0,1.55f,.12f);
             eye=go.GetComponent<Camera>(); eye.nearClipPlane=.05f; eye.fieldOfView=78; LockCursor(true);
         }
         public override void OnNetworkDespawn()
@@ -132,7 +133,7 @@ namespace Bidwarss
         public bool ServerLooksAt(TargetKind kind,int id)
         {
             if(!IsServer)return false;
-            Vector3 origin=transform.position+Vector3.up*1.55f;
+            Vector3 origin=transform.position+Vector3.up*1.55f+transform.forward*.12f;
             Vector3 direction=Quaternion.Euler(serverPitch,transform.eulerAngles.y,0)*Vector3.forward;
             Physics.SyncTransforms();
             var hits=Physics.RaycastAll(origin,direction,3.5f,~0,QueryTriggerInteraction.Ignore);
