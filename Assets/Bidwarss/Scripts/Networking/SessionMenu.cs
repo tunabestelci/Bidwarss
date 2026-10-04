@@ -27,6 +27,12 @@ namespace Bidwarss
                 return spawnPoints[seat%spawnPoints.Length].position;
             return new Vector3(-2.4f+seat*1.6f,.1f,-11);
         }
+        public Quaternion SpawnRotation(int seat)
+        {
+            if(spawnPoints!=null&&spawnPoints.Length>0&&spawnPoints[seat%spawnPoints.Length]!=null)
+                return spawnPoints[seat%spawnPoints.Length].rotation;
+            return Quaternion.identity;
+        }
         public string Address="127.0.0.1",DisplayName="Oyuncu",SeedText="";
         public string Status {get;private set;}="Depo seni bekliyor.";
         public bool Daily;
@@ -109,7 +115,7 @@ namespace Bidwarss
                 seats[request.ClientNetworkId]=seat;names[request.ClientNetworkId]=CleanName(data.name);
                 response.Approved=true;response.CreatePlayerObject=true;
                 response.Position=SpawnPosition(seat);
-                response.Rotation=spawnPoints!=null&&spawnPoints.Length>0&&spawnPoints[seat%spawnPoints.Length]!=null?spawnPoints[seat%spawnPoints.Length].rotation:Quaternion.identity;
+                response.Rotation=SpawnRotation(seat);
             }
             catch(Exception){response.Reason="Bağlantı bilgisi okunamadı.";}
         }

@@ -16,6 +16,16 @@ namespace Bidwarss
                 var col=go.GetComponent<Collider>();col.enabled=false;Destroy(col);
                 var r=go.GetComponent<Renderer>();r.sharedMaterial=material;
                 var block=new MaterialPropertyBlock();block.SetColor("_BaseColor",new Color(.12f,.18f,.22f));r.SetPropertyBlock(block);
+                // The sleeve extends behind the glove toward an elbow below the camera.
+                var sleeve=GameObject.CreatePrimitive(PrimitiveType.Cube);
+                sleeve.name="Work jacket forearm";sleeve.transform.SetParent(go.transform,false);
+                // Cancel the glove scale: dimensions below are expressed in camera metres.
+                sleeve.transform.localScale=new Vector3(.105f/.11f,.105f/.12f,.38f/.2f);
+                sleeve.transform.localPosition=new Vector3(0,-.025f/.12f,-.25f/.2f);
+                var sleeveCollider=sleeve.GetComponent<Collider>();sleeveCollider.enabled=false;Destroy(sleeveCollider);
+                var sleeveRenderer=sleeve.GetComponent<Renderer>();sleeveRenderer.sharedMaterial=material;
+                var sleeveColor=new MaterialPropertyBlock();sleeveColor.SetColor("_BaseColor",new Color(.96f,.48f,.12f));
+                sleeveRenderer.SetPropertyBlock(sleeveColor);
                 if(sign<0)left=go.transform;else right=go.transform;
             }
         }
