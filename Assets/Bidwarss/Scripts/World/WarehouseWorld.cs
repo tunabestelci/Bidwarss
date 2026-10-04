@@ -245,6 +245,26 @@ namespace Bidwarss
                 Items[id]=ToState(Engine.Items[id],pos);
             }
         }
+        static void FitStackLabel(TextMesh label)
+        {
+            if(label.font==null)return;
+            label.richText=false;
+            label.font.RequestCharactersInTexture(label.text,label.fontSize,label.fontStyle);
+            float width=0,lineWidth=0;
+            int lines=1;
+            foreach(char c in label.text)
+            {
+                if(c=='\n'){width=Mathf.Max(width,lineWidth);lineWidth=0;lines++;continue;}
+                if(label.font.GetCharacterInfo(c,out var glyph,label.fontSize,label.fontStyle))lineWidth+=glyph.advance;
+            }
+            width=Mathf.Max(width,lineWidth);
+            // TextMesh maps font pixels into characterSize / 10 world units.
+            // Keep names inside one 2.2 m rack sign, including the count line.
+            var scale=label.transform.lossyScale;
+            float byWidth=22f/(Mathf.Max(1,width)*Mathf.Max(.001f,Mathf.Abs(scale.x)));
+            float byHeight=5.5f/(Mathf.Max(1,label.fontSize)*lines*Mathf.Max(.001f,Mathf.Abs(scale.y)));
+            label.characterSize=Mathf.Min(.1f,byWidth,byHeight);
+        }
         void LateUpdate()
         {
             if(!IsSpawned)return;
@@ -265,7 +285,13 @@ namespace Bidwarss
                 slots[i].gameObject.SetActive(i<Stacks.Count);
                 if(i<Stacks.Count && stackLabels[i]!=null)
                 {
-                    var s=Stacks[i]; stackLabels[i].text=catalog.entries[s.kind].title+"\n"+s.count+" / 10";
+                    var s=Stacks[i];
+                    string labelText=catalog.entries[s.kind].title+"\n"+s.count+" / 10";
+                    if(stackLabels[i].text!=labelText)
+                    {
+                        stackLabels[i].text=labelText;
+                        FitStackLabel(stackLabels[i]);
+                    }
                     stackLabels[i].color=s.count==10?new Color(.3f,1,.55f):Color.white;
                 }
             }

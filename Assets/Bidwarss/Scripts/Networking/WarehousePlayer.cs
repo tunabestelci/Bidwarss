@@ -47,6 +47,7 @@ namespace Bidwarss
             if(!IsOwner)return;
             Local=this; yaw=transform.eulerAngles.y; if(body!=null)body.gameObject.SetActive(false);
             var go=new GameObject("Local camera",typeof(Camera),typeof(AudioListener));
+            go.tag="MainCamera";
             go.transform.SetParent(transform,false); go.transform.localPosition=Vector3.up*1.55f;
             go.AddComponent<WarehouseHands>().Initialize(this,avatarMaterial);
             eye=go.GetComponent<Camera>(); eye.nearClipPlane=.05f; eye.fieldOfView=78; LockCursor(true);
@@ -61,11 +62,12 @@ namespace Bidwarss
             if(!IsServer || SessionMenu.Instance==null)return;
             int seat=SessionMenu.Instance.SeatFor(OwnerClientId);var position=SessionMenu.Instance.SpawnPosition(seat);
             motor.enabled=false;
-            GetComponent<NetworkTransform>().Teleport(position,Quaternion.identity,transform.localScale);
-            motor.enabled=true;verticalSpeed=0;lastInput=-1;ClearOpenIntent();ResetViewRpc();
+            var rotation=SessionMenu.Instance.SpawnRotation(seat);
+            GetComponent<NetworkTransform>().Teleport(position,rotation,transform.localScale);
+            motor.enabled=true;verticalSpeed=0;lastInput=-1;ClearOpenIntent();ResetViewRpc(rotation.eulerAngles.y);
         }
         [Rpc(SendTo.Owner,InvokePermission=RpcInvokePermission.Server)]
-        void ResetViewRpc(){yaw=0;pitch=0;}
+        void ResetViewRpc(float heading){yaw=heading;pitch=0;}
         public void ClearOpenIntent(){wantedCrate=-1;serverMove=Vector2.zero;}
         public static void LockCursor(bool locked)
         {Cursor.lockState=locked?CursorLockMode.Locked:CursorLockMode.None;Cursor.visible=!locked;}

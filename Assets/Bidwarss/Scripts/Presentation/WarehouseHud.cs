@@ -9,12 +9,12 @@ namespace Bidwarss
     {
         GUIStyle title,heading,body,small,button,field;
         bool showHistory,showWorld;
-        Vector2 scroll;
+        Vector2 scroll,depotScroll;
         readonly Color ink=new Color(.045f,.06f,.09f),paper=new Color(.95f,.92f,.81f),gold=new Color(1,.74f,.22f),teal=new Color(.22f,.78f,.72f);
         void Styles()
         {
             if(title!=null)return;
-            title=new GUIStyle(GUI.skin.label){fontSize=48,fontStyle=FontStyle.Bold,wordWrap=true};title.normal.textColor=paper;
+            title=new GUIStyle(GUI.skin.label){fontSize=48,fontStyle=FontStyle.Bold,wordWrap=true,clipping=TextClipping.Clip,richText=false};title.normal.textColor=paper;
             heading=new GUIStyle(title){fontSize=23};body=new GUIStyle(title){fontSize=18,fontStyle=FontStyle.Normal};
             small=new GUIStyle(body){fontSize=15};button=new GUIStyle(GUI.skin.button){fontSize=19,fontStyle=FontStyle.Bold,padding=new RectOffset(12,12,10,10)};
             field=new GUIStyle(GUI.skin.textField){fontSize=20,padding=new RectOffset(12,12,8,8)};
@@ -91,21 +91,34 @@ namespace Bidwarss
             Text(new Rect(1200,67,350,56),Money(world.SecuredDollars.Value),title,gold);
             int heldKind;int held=world.HeldCount(player.OwnerClientId,out heldKind);
             Box(new Rect(1180,158,390,held>0?175:95),new Color(.06f,.1f,.15f,.94f));
-            Text(new Rect(1200,172,350,35),held>0?world.catalog.entries[heldKind].title+"  "+held+"/10":"ELLERİN BOŞ",heading);
+            Text(new Rect(1200,172,350,58),held>0?world.catalog.entries[heldKind].title+"  "+held+"/10":"ELLERİN BOŞ",heading);
             if(held>0)
             {
-                Text(new Rect(1200,218,350,30),"Taşınan değer: "+Money(world.HeldValue(player.OwnerClientId)),body,gold);
-                Text(new Rect(1200,260,350,60),"E: Aynı türü topla / istifle\nQ: Bir eşya bırak",small);
+                Text(new Rect(1200,236,350,30),"Taşınan değer: "+Money(world.HeldValue(player.OwnerClientId)),body,gold);
+                Text(new Rect(1200,274,350,50),"E: Aynı türü topla / istifle\nQ: Bir eşya bırak",small);
             }
             float listY=held>0?355:278;
             Text(new Rect(1200,listY,350,30),"DEPO LİSTESİ",heading,teal);
+            int rowCount=0;
+            for(int kind=0;kind<world.catalog.entries.Length;kind++)
+            {
+                for(int i=0;i<world.Stacks.Count;i++)
+                    if(world.Stacks[i].kind==kind){rowCount++;break;}
+            }
+            float listHeight=735-listY-42;
+            depotScroll=GUI.BeginScrollView(new Rect(1188,listY+42,380,listHeight),depotScroll,
+                new Rect(0,0,355,Mathf.Max(listHeight,rowCount*56)));
+            int row=0;
             for(int kind=0;kind<world.catalog.entries.Length;kind++)
             {
                 int need=0,done=0;
                 for(int i=0;i<world.Stacks.Count;i++)if(world.Stacks[i].kind==kind){need+=10;done+=world.Stacks[i].count;}
                 if(need==0)continue;
-                Text(new Rect(1200,listY+42+kind*34,350,28),world.catalog.entries[kind].title+"   "+done+" / "+need,small,done==need?teal:paper);
+                Text(new Rect(12,row*56,245,50),world.catalog.entries[kind].title,small,done==need?teal:paper);
+                Text(new Rect(265,row*56,85,28),done+" / "+need,small,done==need?teal:paper);
+                row++;
             }
+            GUI.EndScrollView();
             if(Cursor.lockState==CursorLockMode.Locked)
             {
                 Text(new Rect(791,434,30,40),"+",heading,player.Looked!=null?gold:paper);
