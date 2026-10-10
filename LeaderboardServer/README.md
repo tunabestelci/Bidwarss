@@ -33,4 +33,4 @@ Bu model güvenilir oyun sunucusuna dayanır; servis tek başına maçın hareke
 - POST `/v1/runs`, en çok 8192 bayt; `X-Bidwarss-Time`, `X-Bidwarss-Nonce`, `X-Bidwarss-Signature`.
 - İmza girdisi UTF-8: `timestamp + "\n" + nonce + "\n" + ham JSON gövdesi`. Hız sınırında 429 ve `Retry-After`, dolu sunucuda 503 döner.
 
-Katalog/denge değiştiğinde yeni hash'i açıkça izin listesine ekle. Aynı kural seti ve oyuncu sayısı ayrı tabloda tutulur; para azalan, eşitlikte süre artan sıralanır. Günlük ortak yarışma için seed filtresini kullan.
+Katalog/denge değiştiğinde (rastgele depo kuralları, kural sürümü 3 ile eski hash'leri geçersiz kıldı) yeni hash'i açıkça izin listesine ekle. Aynı kural seti ve oyuncu sayısı ayrı tabloda tutulur; para azalan, eşitlikte süre artan sıralanır. Günlük ortak yarışma için seed filtresini kullan.

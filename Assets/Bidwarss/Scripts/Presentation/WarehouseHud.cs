@@ -105,14 +105,14 @@ namespace Bidwarss
             Text(new Rect(130,692,500,70),session.Status,small);
             Box(new Rect(1000,190,465,445),paper);
             Text(new Rect(1030,213,405,40),"HER EŞYANIN BİR HİKÂYESİ VAR",heading,ink);
-            Text(new Rect(1030,278,405,155),"7 farklı durum\nAynı türden 10'lu istifler\nEn fazla 4 oyuncu\nBütün depo bitince tek kazanç",body,ink);
-            Text(new Rect(1030,465,405,135),"İlk sürümde 10 kutu, 120 eşya.\nSüre kaydedilir; para puanından düşülmez.\nBağlantı: LAN / doğrudan IP veya alan adı\nKlavye-fare veya gamepad",small,ink);
+            Text(new Rect(1030,278,405,155),"7 farklı durum\nHer oyunda yeni kutular ve eşyalar\nEn fazla 4 oyuncu\nBütün depo bitince tek kazanç",body,ink);
+            Text(new Rect(1030,465,405,135),"Kutu sayısı, türler ve adetler her turda rastgele.\nSüre kaydedilir; para puanından düşülmez.\nBağlantı: LAN / doğrudan IP veya alan adı\nKlavye-fare veya gamepad",small,ink);
         }
         void InGame(WarehouseWorld world,WarehousePlayer player)
         {
             Box(new Rect(28,25,395,160),new Color(.06f,.1f,.15f,.94f));
             Text(new Rect(48,36,350,30),"BIDWARSS / ANA DEPO",heading,gold);
-            Text(new Rect(48,78,350,28),"Kutu "+world.OpenCount+" / "+world.Crates.Count+"     Eşya "+world.PlacedCount.Value+" / "+world.Items.Count,body);
+            Text(new Rect(48,78,350,28),"Kutu "+world.OpenCount+" / "+world.ActiveCrateCount+"     Eşya "+world.PlacedCount.Value+" / "+world.Items.Count,body);
             Bar(new Rect(48,122,350,12),world.Items.Count==0?0:(float)world.PlacedCount.Value/world.Items.Count,teal);
             Text(new Rect(48,148,350,25),Clock(world.Elapsed)+"   •   Seed "+world.Seed.Value,small);
             Box(new Rect(1180,25,390,112),new Color(.06f,.1f,.15f,.94f));
@@ -141,7 +141,7 @@ namespace Bidwarss
             for(int kind=0;kind<world.catalog.entries.Length;kind++)
             {
                 int need=0,done=0;
-                for(int i=0;i<world.Stacks.Count;i++)if(world.Stacks[i].kind==kind){need+=10;done+=world.Stacks[i].count;}
+                for(int i=0;i<world.Stacks.Count;i++)if(world.Stacks[i].kind==kind){need+=world.Stacks[i].capacity;done+=world.Stacks[i].count;}
                 if(need==0)continue;
                 Text(new Rect(12,row*56,245,50),world.catalog.entries[kind].title,small,done==need?teal:paper);
                 Text(new Rect(265,row*56,85,28),done+" / "+need,small,done==need?teal:paper);
@@ -156,7 +156,7 @@ namespace Bidwarss
                 if(player.Looked!=null && player.Looked.kind==TargetKind.Crate && player.Looked.id<world.Crates.Count)
                 {
                     var crate=world.Crates[player.Looked.id];
-                    if(!crate.opened)
+                    if(!crate.opened&&crate.active)
                     {
                         Bar(new Rect(570,735,460,17),crate.progress,gold);
                         if(crate.opener!=ItemState.Nobody && crate.opener!=player.OwnerClientId)
@@ -198,7 +198,7 @@ namespace Bidwarss
             Text(new Rect(370,115,850,70),"DEPO TAMAMLANDI!",title,gold);
             Text(new Rect(370,192,840,45),world.TeamNames.Value.ToString(),body);
             Text(new Rect(370,249,800,85),Money(world.FinalDollars.Value),bigTitle,teal);
-            Text(new Rect(375,342,820,36),world.Items.Count+" eşya • "+world.Stacks.Count+" tam istif • "+Clock(world.Elapsed)+" • "+world.PeakPlayers.Value+" oyuncu",body);
+            Text(new Rect(375,342,820,36),world.Items.Count+" eşya • "+world.Stacks.Count+" istif • "+world.ActiveCrateCount+" kutu • "+Clock(world.Elapsed)+" • "+world.PeakPlayers.Value+" oyuncu",body);
             for(int c=0;c<7;c++)
             {
                 int count=0,value=0;

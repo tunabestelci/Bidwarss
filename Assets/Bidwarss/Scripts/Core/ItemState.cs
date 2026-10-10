@@ -43,19 +43,21 @@ namespace Bidwarss
     public struct CrateState : INetworkSerializable, IEquatable<CrateState>
     {
         public bool opened;
+        // Every depot uses a random subset of the containers in the scene; the others stay shut and empty.
+        public bool active;
         public ulong opener;
         public float progress;
         public double openedAt;
         public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
-        { s.SerializeValue(ref opened); s.SerializeValue(ref opener); s.SerializeValue(ref progress); s.SerializeValue(ref openedAt); }
-        public bool Equals(CrateState o) => opened == o.opened && opener == o.opener && progress.Equals(o.progress) && openedAt.Equals(o.openedAt);
+        { s.SerializeValue(ref opened); s.SerializeValue(ref active); s.SerializeValue(ref opener); s.SerializeValue(ref progress); s.SerializeValue(ref openedAt); }
+        public bool Equals(CrateState o) => opened == o.opened && active == o.active && opener == o.opener && progress.Equals(o.progress) && openedAt.Equals(o.openedAt);
     }
 
     public struct StackState : INetworkSerializable, IEquatable<StackState>
     {
-        public int kind, count;
+        public int kind, count, capacity;
         public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
-        { s.SerializeValue(ref kind); s.SerializeValue(ref count); }
-        public bool Equals(StackState o) => kind == o.kind && count == o.count;
+        { s.SerializeValue(ref kind); s.SerializeValue(ref count); s.SerializeValue(ref capacity); }
+        public bool Equals(StackState o) => kind == o.kind && count == o.count && capacity == o.capacity;
     }
 }

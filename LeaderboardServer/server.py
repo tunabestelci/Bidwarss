@@ -144,13 +144,11 @@ class ScoreStore:
             raise ValueError()
         if data.get("rules_hash") not in self.allowed_rules:
             raise ValueError()
-        limits = {"player_count": (1, 4), "item_count": (10, 300), "seed": (-2147483648, 2147483647),
+        limits = {"player_count": (1, 4), "item_count": (1, 300), "seed": (-2147483648, 2147483647),
                   "total_dollars": (1, 300000000), "elapsed_milliseconds": (1, 604800000)}
         for field, (low, high) in limits.items():
             if type(data.get(field)) is not int or not low <= data[field] <= high:
                 raise ValueError()
-        if data["item_count"] % 10:
-            raise ValueError()
         team = data.get("team")
         if not isinstance(team, str) or not 1 <= len(team) <= 160 or any(ord(c) < 32 or c in "<>" for c in team):
             raise ValueError()

@@ -134,6 +134,33 @@ class RepositoryTests(unittest.TestCase):
             self.assertTrue(needle in readme, needle + " is not linked from README.md")
             self.assertTrue((ROOT / needle).exists(), needle + " does not exist")
 
+    def test_default_catalog_is_a_valid_shared_catalog(self):
+        data = json.loads((ASSETS / "Bidwarss" / "Data" / "ItemCatalog.json").read_text(encoding="utf-8"))
+        self.assertEqual((data["format"], data["version"]), ("bidwarss-catalog", 1))
+        self.assertEqual(len(data["tiers"]), 7)
+        keys = [i["key"] for i in data["items"]]
+        self.assertEqual(len(keys), len(set(keys)), "duplicate item keys")
+        self.assertTrue(1 <= len(keys) <= 40)
+        for item in data["items"]:
+            self.assertTrue(item["key"].strip() and item["baseValue"] > 0, item["key"])
+            self.assertTrue(max(item["heightCm"], item["widthCm"], item["depthCm"]) > 0, "no size: " + item["key"])
+
+    def test_wiki_source_has_depot_simulator_markers_and_golden_file(self):
+        page = (ROOT / "Site" / "kasa-defteri.html").read_text(encoding="utf-8")
+        for marker in ("/* DEPOT-SIM:BEGIN", "/* DEPOT-SIM:END */", 'id="p-sim"', 'id="exp-game"'):
+            self.assertIn(marker, page)
+        golden = (ROOT / "Tests" / "golden_depots.txt").read_text(encoding="utf-8").strip().splitlines()
+        self.assertGreaterEqual(len(golden), 10)
+
+    def test_depot_simulator_matches_golden_file_when_node_is_available(self):
+        import shutil
+        import subprocess
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("node is not installed")
+        result = subprocess.run([node, str(ROOT / "Tests" / "depot_sim_check.js")], capture_output=True, text=True, timeout=300)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

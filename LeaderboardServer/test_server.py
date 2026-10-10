@@ -9,7 +9,7 @@ class ScoresTest(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory(); self.secret='test-secret-'*4; self.rules='a'*64
         self.store=ScoreStore(Path(self.tmp.name)/'scores.db',self.secret,[self.rules])
-        self.score=dict(run_id=uuid.uuid4().hex,rules_hash=self.rules,team='Tuna / Test',finished_utc='2026-09-28T00:00:00Z',seed=42,total_dollars=12000,elapsed_milliseconds=60000,player_count=2,item_count=120)
+        self.score=dict(run_id=uuid.uuid4().hex,rules_hash=self.rules,team='Tuna / Test',finished_utc='2026-09-28T00:00:00Z',seed=42,total_dollars=12000,elapsed_milliseconds=60000,player_count=2,item_count=87)
     def tearDown(self): self.tmp.cleanup()
     def sign(self,raw,stamp=None,nonce=None):
         stamp=str(stamp or int(time.time())); nonce=nonce or uuid.uuid4().hex
@@ -27,7 +27,7 @@ class ScoresTest(unittest.TestCase):
     def test_validation_and_conflicting_retry(self):
         self.assertEqual(self.store.accept(*self.signed())[0],201)
         other=dict(self.score,total_dollars=12001);self.assertEqual(self.store.accept(*self.signed(other))[0],409)
-        for change in [dict(item_count=121),dict(rules_hash='b'*64),dict(player_count=5),dict(total_dollars=True),dict(team='<script>')]:
+        for change in [dict(item_count=301),dict(item_count=0),dict(rules_hash='b'*64),dict(player_count=5),dict(total_dollars=True),dict(team='<script>')]:
             self.assertEqual(self.store.accept(*self.signed(dict(self.score,**change)))[0],422)
     def test_ranking_and_isolation(self):
         for value,players,seed in [(100,2,42),(300,2,42),(200,2,43),(999,1,42)]:

@@ -1,0 +1,1385 @@
+<title>Kasa Defteri</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Hanken+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: sevkiyat deposu defteri. Üstte künye şeridi, altında sekmeler: itemler (wiki indeksi ve item sayfaları), item ekle, sınıflar.
+   Renk taşıyıcısı yıpranmışlık sınıflarının renkleri; arayüz nötr, vurgu tek turuncu. */
+:root {
+  --bg: #eceff3;
+  --surface: #fbfcfd;
+  --surface2: #e2e7ed;
+  --line: #cdd5de;
+  --fg: #12171e;
+  --muted: #566170;
+  --accent: #c9440f;
+  --accent-fg: #ffffff;
+  --ok: #1b7f53;
+  --bad: #b8312a;
+  --img: #dde3ea;
+  --f-display: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif;
+  --f-body: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1318; --surface: #171c23; --surface2: #202833; --line: #2c3541;
+    --fg: #e7ebf0; --muted: #98a4b3; --accent: #ff7a45; --accent-fg: #1c0e06;
+    --ok: #4cc38a; --bad: #ff7468; --img: #10151b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1318; --surface: #171c23; --surface2: #202833; --line: #2c3541;
+  --fg: #e7ebf0; --muted: #98a4b3; --accent: #ff7a45; --accent-fg: #1c0e06;
+  --ok: #4cc38a; --bad: #ff7468; --img: #10151b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.45; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { max-width: 1180px; margin-inline: auto; padding-inline: 16px; padding-block: 22px 48px; display: flex; flex-direction: column; gap: 18px; }
+
+.top { display: flex; flex-wrap: wrap; gap: 14px 32px; align-items: flex-end; justify-content: space-between; }
+.brand { min-width: 0; }
+.brand h1 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: 44px; line-height: 0.95; letter-spacing: 0.01em; text-transform: uppercase; text-wrap: balance; }
+.brand p { margin: 6px 0 0; color: var(--muted); }
+.stats { display: flex; flex-wrap: wrap; gap: 10px 28px; }
+.stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat span { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.stat b { font-family: var(--f-mono); font-weight: 600; font-size: 19px; font-variant-numeric: tabular-nums; }
+.stat b.bad { color: var(--bad); }
+.stat b.ok { color: var(--ok); }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); }
+.tab { background: none; border: 0; padding: 10px 14px; margin-bottom: -1px; border-bottom: 3px solid transparent; font-weight: 700; color: var(--muted); }
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 8px 14px; border-radius: 6px; font-weight: 700; }
+.btn:hover { background: var(--surface2); }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.danger { color: var(--bad); }
+.btn.sm { padding: 5px 10px; font-size: 13px; }
+input[type=text], input[type=number], input[type=search], select, textarea {
+  width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0;
+}
+textarea { resize: vertical; min-height: 84px; }
+.fld { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.fld > span { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.note { padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--muted); }
+.note.warn { color: var(--fg); border-color: var(--accent); }
+.hint { font-size: 12px; color: var(--muted); }
+.hint.bad { color: var(--bad); }
+h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: 26px; text-transform: uppercase; letter-spacing: 0.02em; }
+.sec { display: flex; flex-direction: column; gap: 12px; }
+.lead { margin: 0; max-width: 70ch; color: var(--muted); }
+.kv { display: flex; flex-wrap: wrap; gap: 8px 28px; }
+.tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.foot .sp { flex: 1; }
+
+.tag { display: inline-block; font-family: var(--f-display); font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; font-size: 13px; line-height: 1; padding: 4px 7px 3px; border-radius: 3px;
+  color: color-mix(in srgb, var(--tc, #7d8590) 62%, var(--fg)); background: color-mix(in srgb, var(--tc, #7d8590) 18%, var(--surface)); border: 1px solid color-mix(in srgb, var(--tc, #7d8590) 45%, transparent); }
+
+/* Item indeksi */
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.bar .search { flex: 1 1 220px; min-width: 0; }
+.bar .sel { flex: 0 1 220px; min-width: 0; }
+.bar .export { display: flex; gap: 6px; margin-inline-start: auto; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.card { position: relative; display: flex; flex-direction: column; text-align: start; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; min-width: 0; }
+.card:hover { border-color: var(--accent); }
+.pic { display: block; aspect-ratio: 1 / 1; background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--tc, #7d8590) 24%, var(--img)) 0%, var(--img) 72%); }
+.pic img { width: 100%; height: 100%; object-fit: contain; display: block; padding: 8px; }
+.pic img.broken { visibility: hidden; }
+.meta { display: flex; flex-direction: column; gap: 6px; padding: 10px; min-width: 0; align-items: flex-start; }
+.nm { font-weight: 700; overflow-wrap: anywhere; line-height: 1.25; }
+.rng { display: flex; flex-direction: column; gap: 1px; font-family: var(--f-mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+.rng b { font-weight: 600; }
+.mbar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--surface2); width: 100%; }
+.mbar span { background: var(--tc); min-width: 1px; }
+.src { position: absolute; top: 8px; inset-inline-end: 8px; font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 2px 5px; color: var(--muted); }
+.src.todo { color: var(--accent); border-color: var(--accent); }
+.empty { grid-column: 1 / -1; padding: 36px 16px; border: 1px dashed var(--line); border-radius: 6px; text-align: center; color: var(--muted); }
+.empty b { display: block; color: var(--fg); font-family: var(--f-display); font-size: 24px; text-transform: uppercase; margin-bottom: 4px; }
+
+/* Item sayfası */
+.back { align-self: flex-start; }
+.ipage { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 22px; align-items: start; }
+.ileft, .iright { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.pic.big { border-radius: 8px; border: 1px solid var(--line); }
+.why { font-size: 14px; color: var(--muted); border-inline-start: 3px solid var(--line); padding-inline-start: 12px; }
+.ihead { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.pbar { display: flex; height: 22px; border-radius: 4px; overflow: hidden; border: 1px solid var(--line); background: var(--surface2); }
+.pbar span { background: var(--tc); min-width: 2px; }
+.crows { display: flex; flex-direction: column; gap: 8px; }
+.crow { display: grid; grid-template-columns: 150px repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; padding: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.crow .ct { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; align-self: center; min-width: 0; }
+.crow.off { opacity: 0.7; border-style: dashed; }
+.crow .fld input { font-family: var(--f-mono); text-align: end; }
+.crow .fld input.bad { border-color: var(--bad); }
+
+.dims { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; align-items: end; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.dims .ttl { grid-column: 1 / -1; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.dims .fld input { font-family: var(--f-mono); text-align: end; }
+.adj { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.adj .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.adj .btn { min-width: 52px; font-family: var(--f-mono); font-size: 15px; letter-spacing: 0.02em; }
+.adj .btn.up { color: var(--ok); }
+.adj .btn.down { color: var(--bad); }
+.adj .sepv { width: 1px; align-self: stretch; background: var(--line); margin-inline: 4px; }
+.adj .fld.note { flex: none; min-width: 0; }
+.adj .why2 { font-size: 13px; color: var(--muted); min-height: 1.3em; overflow-wrap: anywhere; }
+.dims .btnrow { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* Ekle */
+.two { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.stack { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.drop { position: relative; display: flex; flex-direction: column; gap: 4px; align-items: center; text-align: center; padding: 28px 16px; border: 2px dashed var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; }
+.drop strong { font-family: var(--f-display); font-size: 24px; text-transform: uppercase; letter-spacing: 0.02em; }
+.drop span { color: var(--muted); }
+.drop.over, .drop:focus-within, .drop:hover { border-color: var(--accent); }
+.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+fieldset.modes { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 12px 14px; margin: 0; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+fieldset.modes legend { padding-inline: 6px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mode { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: start; }
+.mode input { margin-top: 4px; accent-color: var(--accent); }
+.mode small { grid-column: 2; color: var(--muted); font-size: 13px; }
+.mode[data-off="1"] { opacity: 0.5; }
+.queue { display: flex; flex-direction: column; gap: 8px; }
+.qrow { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.qrow img { width: 56px; height: 56px; object-fit: cover; border-radius: 4px; background: var(--img); }
+.qrow .qs { font-size: 13px; color: var(--muted); margin-top: 4px; min-height: 1.3em; overflow-wrap: anywhere; }
+.qrow .qs.ok { color: var(--ok); }
+.qrow .qs.err { color: var(--bad); }
+.qrow .qs.busy { color: var(--accent); }
+.qact { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Sınıflar */
+.trows { display: flex; flex-direction: column; gap: 8px; }
+.trow { display: grid; grid-template-columns: 44px minmax(120px, 1fr) 120px auto; gap: 10px; align-items: end; padding: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.trow input[type=color] { width: 44px; height: 38px; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.trow .acts { display: flex; gap: 4px; }
+.trow .cnt { color: var(--muted); font-size: 13px; align-self: center; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--tc); margin-inline-end: 5px; }
+
+.toast { position: fixed; z-index: 30; inset-inline: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); margin-inline: auto; width: fit-content; max-width: 100%; background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 6px; font-weight: 500; }
+
+/* Depo düzeni */
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+.rule { display: flex; flex-direction: column; gap: 4px; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
+.rule b { font-family: var(--f-display); font-weight: 800; font-size: 28px; line-height: 1; letter-spacing: 0.02em; }
+.rule em { font-style: normal; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.rule span { font-size: 13px; color: var(--muted); }
+.simbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.simbar .fld { flex: 0 1 190px; }
+.simbar .sp { flex: 1; }
+.cgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.crt { display: flex; flex-direction: column; gap: 8px; padding: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
+.crt.off { border-style: dashed; opacity: 0.6; }
+.crt h3 { margin: 0; display: flex; justify-content: space-between; gap: 8px; font-family: var(--f-display); font-weight: 800; font-size: 18px; letter-spacing: 0.03em; text-transform: uppercase; }
+.crt h3 span:last-child { font-family: var(--f-mono); font-size: 13px; font-weight: 600; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { display: inline-flex; gap: 6px; align-items: center; padding: 3px 7px; border-radius: 3px; font-size: 12px; line-height: 1.3;
+  background: color-mix(in srgb, var(--kc, #7d8590) 16%, var(--surface)); border: 1px solid color-mix(in srgb, var(--kc, #7d8590) 48%, transparent); }
+.chip b { font-family: var(--f-mono); font-weight: 600; }
+.chip.full { background: color-mix(in srgb, var(--ok) 14%, var(--surface)); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
+.hist { display: flex; flex-direction: column; gap: 5px; max-width: 560px; }
+.hrow { display: grid; grid-template-columns: 96px minmax(0, 1fr) 56px; gap: 8px; align-items: center; font-size: 13px; }
+.hrow .mono { text-align: end; }
+.hbar { height: 10px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.hbar span { display: block; height: 100%; background: var(--accent); }
+.fp { font-family: var(--f-mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+
+@media (max-width: 760px) {
+  .brand h1 { font-size: 36px; }
+  .two, .ipage { grid-template-columns: minmax(0, 1fr); }
+  .pic.big { max-height: 260px; }
+  .pic.big img { max-height: 260px; }
+  .crow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .crow .ct { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 10px; }
+  .trow { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .trow .fld.nm2 { grid-column: 2 / 4; }
+  .trow .cnt { grid-column: 1 / 3; }
+  .trow .acts { grid-column: 3; justify-self: end; }
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Kasa Defteri</h1>
+      <p>Itemler, durumsal sınıfları, fiyatları, kilo ve ölçüleri. Oyunla birebir eşleşir.</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Bölümler">
+    <button class="tab" role="tab" id="t-inv" data-tab="inv" aria-controls="p-inv" aria-selected="true">Itemler</button>
+    <button class="tab" role="tab" id="t-add" data-tab="add" aria-controls="p-add" aria-selected="false">Item ekle</button>
+    <button class="tab" role="tab" id="t-sim" data-tab="sim" aria-controls="p-sim" aria-selected="false">Depo düzeni</button>
+    <button class="tab" role="tab" id="t-tiers" data-tab="tiers" aria-controls="p-tiers" aria-selected="false">Sınıflar</button>
+  </nav>
+
+  <section id="p-inv" role="tabpanel" aria-labelledby="t-inv" class="sec">
+    <div class="sec" id="list-view">
+      <div class="bar">
+        <label class="fld search"><span>Ara</span><input id="q" type="search" placeholder="Item adı veya detay"></label>
+        <label class="fld sel"><span>Sırala</span>
+          <select id="sort">
+            <option value="new">En yeni</option>
+            <option value="old">En eski</option>
+            <option value="name">Ad (A-Z)</option>
+            <option value="hi">Fiyat: yüksekten düşüğe</option>
+            <option value="lo">Fiyat: düşükten yükseğe</option>
+            <option value="kg">Kilo: ağırdan hafife</option>
+          </select>
+        </label>
+        <div class="export" id="export" hidden>
+          <button class="btn sm primary" id="exp-game" type="button" title="Oyunun içe aktardığı katalog dosyası">Oyun kataloğu</button>
+          <button class="btn sm" id="exp-json" type="button">JSON indir</button>
+          <button class="btn sm" id="exp-csv" type="button">CSV indir</button>
+        </div>
+      </div>
+      <div id="inv-note"></div>
+      <div class="grid" id="grid"></div>
+    </div>
+    <div class="sec" id="page-view" hidden></div>
+  </section>
+
+  <section id="p-add" role="tabpanel" aria-labelledby="t-add" class="sec" hidden>
+    <div class="two">
+      <div class="stack">
+        <label class="drop" id="drop">
+          <input id="files" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple>
+          <strong>Görselleri bırak</strong>
+          <span>Ya da tıklayıp seç. Her görsel ayrı bir item olur, adını aşağıda düzeltebilirsin.</span>
+        </label>
+        <fieldset class="modes">
+          <legend>Sınıflandırma</legend>
+          <label class="mode" id="mode-ai-wrap"><input type="radio" name="mode" value="ai" id="mode-ai"><b>Yapay zeka sınıflandırsın</b>
+            <small id="ai-small">Yapay zeka hazırlanıyor…</small></label>
+          <label class="mode"><input type="radio" name="mode" value="blank" id="mode-blank" checked><b>Boş ekle</b>
+            <small>Item sınıflandırılmadan eklenir. Sınıfları item sayfasında kendin yazarsın ya da sonra yapay zekaya yaptırırsın.</small></label>
+        </fieldset>
+        <div id="ai-retry" hidden><button class="btn sm" type="button" id="ai-again">Yapay zekayı tekrar dene</button></div>
+        <div id="add-note"></div>
+      </div>
+      <div class="stack">
+        <div class="foot">
+          <button class="btn primary" id="go" type="button" disabled>Ekle</button>
+          <button class="btn" id="stop" type="button" hidden>Durdur</button>
+          <button class="btn" id="clear" type="button" hidden>Biteni temizle</button>
+        </div>
+        <div class="queue" id="queue"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="p-sim" role="tabpanel" aria-labelledby="t-sim" class="sec" hidden>
+    <div class="sec">
+      <h2>Depo düzeni</h2>
+      <p class="lead">Oyun her turda depoyu baştan, tamamen rastgele kurar: hangi konteynerlerin kullanılacağı, kaç rafın dolacağı, hangi itemlerin çıkacağı, her birinden kaç tane olacağı ve hangi konteynerde duracağı seed’den çekilir. Burası aynı kuralları defterdeki itemlerle çalıştırır. Kataloğu oyuna aktarırsan aynı seed oyunda da aynı depoyu verir.</p>
+    </div>
+    <div class="rules" id="sim-rules"></div>
+    <div id="sim-note"></div>
+    <div class="simbar">
+      <label class="fld"><span>Seed</span><input type="number" id="sim-seed" step="1" inputmode="numeric"></label>
+      <button class="btn primary" id="sim-roll" type="button">Rastgele depo çek</button>
+      <button class="btn" id="sim-draw" type="button">Bu seed’i göster</button>
+      <button class="btn" id="sim-many" type="button">400 tur dene</button>
+      <span class="sp"></span>
+      <button class="btn" id="sim-export" type="button">Oyun kataloğunu indir</button>
+    </div>
+    <div class="sec" id="sim-out"></div>
+    <div class="sec">
+      <h2>Item başına üst sınır</h2>
+      <p class="lead">Büyük ve ağır parça düzine ile çıkmaz. Sınır ölçülerden otomatik gelir; item sayfasındaki “Turda en fazla” kutusuna bir sayı yazarsan o geçerli olur.</p>
+      <div class="chips" id="sim-caps"></div>
+    </div>
+  </section>
+
+  <section id="p-tiers" role="tabpanel" aria-labelledby="t-tiers" class="sec" hidden>
+    <div class="sec">
+      <h2>Durumsal sınıflar</h2>
+      <p class="lead">Burada sadece sınıfların adı, rengi ve sırası var. Fiyat, kilo ve çıkma şansı genel değil; her itemin kendi sayfasında, o itemin potansiyeline göre yapay zeka tarafından belirlenir. Sırayı yıpranmışlıktan en iyiye doğru tut, yapay zeka bu sıraya bakar. Oyun tam yedi sınıf bekler: Çok kötü, Kötü, Orta, İyi, Çok iyi, Destansı, Efsanevi.</p>
+    </div>
+    <div id="t-game"></div>
+    <div class="legend" id="plegend"></div>
+    <div class="trows" id="trows"></div>
+    <div class="foot">
+      <button class="btn" id="t-addrow" type="button">Sınıf ekle</button>
+      <button class="btn" id="t-reset" type="button">Varsayılanlara dön</button>
+      <span class="sp"></span>
+      <span class="hint" id="t-msg"></span>
+      <button class="btn" id="t-cancel" type="button" disabled>Vazgeç</button>
+      <button class="btn primary" id="t-save" type="button" disabled>Kaydet</button>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+/* DEPOT-SIM:BEGIN
+   Oyunun depo kurma algoritmasının birebir kopyası (Assets/Bidwarss/Domain/RoundEngine.cs ve GameRules.cs).
+   Aynı katalog ve aynı seed ile oyunun verdiği depoyu verir. Tests/depot_sim_check.js bunu oyunun C# çıktısıyla karşılaştırır. */
+var DepotSim = (function () {
+  'use strict';
+  var RULES = {
+    crateCount: 10, minCrates: 6, totalGroups: 12, minGroups: 8, stackSize: 10, maxPerType: 20, crateLimit: 24, conditionCount: 7, maxItems: 40,
+    countOptions: [5, 10, 15, 20], countWeights: [3, 4, 3, 2],
+    sizeCaps: [[150, 5], [100, 10], [70, 15]], weightCaps: [[60, 5], [30, 10], [15, 15]]
+  };
+  var DEFAULT_CHANCE = [30, 26, 20, 13, 7, 3.5, 0.5];
+
+  function Rng(seed) { var s = (seed | 0) >>> 0; if (s === 0) s = 0x9E3779B9; this.s = s; }
+  Rng.prototype.next = function () {
+    var x = this.s;
+    x = (x ^ (x << 13)) >>> 0; x = (x ^ (x >>> 17)) >>> 0; x = (x ^ (x << 5)) >>> 0;
+    this.s = x; return x;
+  };
+  Rng.prototype.range = function (n) {
+    var limit = 4294967295 - (4294967295 % n), v;
+    do { v = this.next(); } while (v >= limit);
+    return v % n;
+  };
+  Rng.prototype.shuffle = function (a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = this.range(i + 1), t = a[i]; a[i] = a[j]; a[j] = t; }
+  };
+
+  /* Büyük ve ağır parça asla düzine ile çıkmaz: 2 m'lik boy saati en çok 5 kez. */
+  function maxCount(it) {
+    if ((it.maxCount | 0) > 0) return Math.min(RULES.maxPerType, it.maxCount | 0);
+    var size = Math.max(it.heightCm || 0, it.widthCm || 0, it.depthCm || 0), kg = +it.kg || 0, cap = RULES.maxPerType, k;
+    for (k = 0; k < RULES.sizeCaps.length; k++) if (size >= RULES.sizeCaps[k][0]) { cap = RULES.sizeCaps[k][1]; break; }
+    for (k = 0; k < RULES.weightCaps.length; k++) if (kg >= RULES.weightCaps[k][0]) { cap = Math.min(cap, RULES.weightCaps[k][1]); break; }
+    return cap;
+  }
+
+  function quantize(v) { return Math.floor(v * 1000000 + 0.5) / 1000000; }
+  function multipliers(collector) {
+    var c = Math.min(10, Math.max(0, +collector || 0)), log = [-0.65, -0.35, 0], steps = [0.40, 0.45, 0.48 + 0.05 * c, 0.50 + 0.10 * c], total = 0, out = [], k;
+    for (k = 0; k < steps.length; k++) { total += steps[k]; log.push(total); }
+    for (k = 0; k < 7; k++) out.push(quantize(Math.exp(log[k])));
+    return out;
+  }
+  function roundPrice(v) { var step = v < 100 ? 1 : (v < 1000 ? 5 : 10); return Math.max(0, Math.floor(v / step + 0.5) * step); }
+
+  /* Bir itemin yedi sınıfı: çıkma ağırlığı (binde bir yüzde) ve fiyat aralığı. Defter tabloyu elle de verebilir. */
+  function table(it) {
+    var t = { weight: [], min: [], max: [], total: 0 }, k, n = RULES.conditionCount;
+    if (it.classes && it.classes.length) {
+      if (it.classes.length !== n) throw new Error('Sınıf tablosu yedi satır olmalı: ' + it.key);
+      for (k = 0; k < n; k++) {
+        var c = it.classes[k];
+        t.weight.push(Math.floor(c.chance * 1000 + 0.5)); t.min.push(c.priceMin); t.max.push(c.priceMax); t.total += t.weight[k];
+      }
+    } else {
+      var m = multipliers(it.collector), base = Math.max(1, it.baseValue || 1);
+      for (k = 0; k < n; k++) {
+        var center = base * m[k], pos = k / (n - 1), spread = 0.09 + 0.16 * pos * pos;
+        var lo = Math.max(1, roundPrice(center * (1 - spread))), hi = Math.max(lo, roundPrice(center * (1 + spread)));
+        t.weight.push(Math.floor(DEFAULT_CHANCE[k] * 1000 + 0.5)); t.min.push(lo); t.max.push(hi); t.total += t.weight[k];
+      }
+    }
+    if (t.total < 1) throw new Error('Hiçbir sınıfın çıkma şansı yok: ' + it.key);
+    return t;
+  }
+
+  function racksFor(count) { return Math.floor((count + RULES.stackSize - 1) / RULES.stackSize); }
+  function nextOption(count, limit) {
+    for (var i = 0; i < RULES.countOptions.length; i++) { var o = RULES.countOptions[i]; if (o > count && o <= limit) return o; }
+    return 0;
+  }
+  /* Çoğunlukla 5, 10, 15 ya da 20; ara sıra 7 ya da 13 gibi tek sayılı bir parti. */
+  function pickCount(limit, rng) {
+    var total = 0, i;
+    for (i = 0; i < RULES.countOptions.length; i++) if (RULES.countOptions[i] <= limit) total += RULES.countWeights[i];
+    if (total === 0) return limit;
+    if (limit >= 4 && rng.range(6) === 0) return 3 + rng.range(limit - 2);
+    var ticket = rng.range(total);
+    for (i = 0; i < RULES.countOptions.length; i++) {
+      if (RULES.countOptions[i] > limit) continue;
+      ticket -= RULES.countWeights[i];
+      if (ticket < 0) return RULES.countOptions[i];
+    }
+    return limit;
+  }
+  function chooseCounts(items, limits, rackBudget, rng) {
+    var counts = items.map(function () { return 0; }), pool = items.map(function (_, i) { return i; }), left = rackBudget, i;
+    while (pool.length > 0 && left > 0) {
+      var total = 0;
+      for (i = 0; i < pool.length; i++) total += items[pool[i]].selectionWeight || 1;
+      var ticket = rng.range(total), at = 0;
+      for (; at < pool.length - 1; at++) { ticket -= items[pool[at]].selectionWeight || 1; if (ticket < 0) break; }
+      var kind = pool[at]; pool.splice(at, 1);
+      counts[kind] = pickCount(Math.min(limits[kind], left * RULES.stackSize), rng);
+      left -= racksFor(counts[kind]);
+    }
+    while (left > 0) {
+      var growable = [];
+      for (i = 0; i < counts.length; i++) {
+        var next = nextOption(counts[i], limits[i]);
+        if (counts[i] > 0 && next > 0 && racksFor(next) - racksFor(counts[i]) <= left) growable.push(i);
+      }
+      if (growable.length === 0) break;
+      var pick = growable[rng.range(growable.length)], grown = nextOption(counts[pick], limits[pick]);
+      left -= racksFor(grown) - racksFor(counts[pick]); counts[pick] = grown;
+    }
+    return counts;
+  }
+
+  /* Katalog: { items: [{ key, kg, heightCm, widthCm, depthCm, baseValue, collector, maxCount, selectionWeight, classes? }] } */
+  function generate(catalog, seed) {
+    var items = catalog.items, rng = new Rng(seed), kinds = items.length, tables = [], limits = [], i, k;
+    for (i = 0; i < kinds; i++) { tables.push(table(items[i])); limits.push(maxCount(items[i])); }
+    var wantedCrates = RULES.minCrates + rng.range(RULES.crateCount - RULES.minCrates + 1);
+    var rackBudget = RULES.minGroups + rng.range(RULES.totalGroups - RULES.minGroups + 1);
+    var counts = chooseCounts(items, limits, rackBudget, rng);
+
+    var rackKinds = [], rackCaps = [], remaining;
+    for (k = 0; k < kinds; k++)
+      for (remaining = counts[k]; remaining > 0; remaining -= RULES.stackSize) { rackKinds.push(k); rackCaps.push(Math.min(RULES.stackSize, remaining)); }
+    var rackOrder = rackKinds.map(function (_, j) { return j; });
+    rng.shuffle(rackOrder);
+    var racks = rackOrder.map(function (j) { return { kind: rackKinds[j], capacity: rackCaps[j] }; });
+
+    var list = [], total = 0;
+    for (k = 0; k < kinds; k++) {
+      var t = tables[k];
+      for (var n = 0; n < counts[k]; n++) {
+        var ticket = rng.range(t.total), cond = 0;
+        for (; cond < RULES.conditionCount - 1; cond++) { ticket -= t.weight[cond]; if (ticket < 0) break; }
+        var dollars = t.min[cond] + rng.range(t.max[cond] - t.min[cond] + 1);
+        list.push({ kind: k, cond: cond, dollars: dollars, crate: -1, slot: -1, id: -1 }); total += dollars;
+      }
+    }
+    rng.shuffle(list);
+
+    var order = []; for (i = 0; i < RULES.crateCount; i++) order.push(i);
+    rng.shuffle(order);
+    var activeCount = Math.min(wantedCrates, list.length), used = order.slice(0, activeCount), active = [], share = [], load = [];
+    for (i = 0; i < RULES.crateCount; i++) { active.push(false); share.push(0); load.push(0); }
+    used.forEach(function (c) { active[c] = true; share[c] = 1 + rng.range(4); });
+    for (i = 0; i < list.length; i++) {
+      var crate = -1;
+      if (i < used.length) crate = used[i];
+      else {
+        var sum = 0, u;
+        for (u = 0; u < used.length; u++) if (load[used[u]] < RULES.crateLimit) sum += share[used[u]];
+        var pickTicket = rng.range(sum);
+        for (u = 0; u < used.length; u++) {
+          var c2 = used[u];
+          if (load[c2] >= RULES.crateLimit) continue;
+          pickTicket -= share[c2];
+          if (pickTicket < 0) { crate = c2; break; }
+        }
+      }
+      list[i].id = i; list[i].crate = crate; list[i].slot = load[crate]++;
+    }
+    var activeList = []; for (i = 0; i < RULES.crateCount; i++) if (active[i]) activeList.push(i);
+    return { seed: seed | 0, items: list, counts: counts, limits: limits, racks: racks, active: activeList, load: load, total: total };
+  }
+
+  /* Oyunun Tests/DomainTests.cs içindeki özetiyle aynı satır. */
+  function summary(d) {
+    var hash = 2166136261, i, s;
+    d.items.forEach(function (it) {
+      [it.kind, it.cond, it.dollars, it.crate, it.slot].forEach(function (v) {
+        for (s = 0; s < 32; s += 8) { hash = Math.imul(hash ^ ((v >> s) & 255), 16777619) >>> 0; }
+      });
+    });
+    var loadText = [], kindText = [];
+    for (i = 0; i < d.load.length; i++) if (d.load[i] > 0) loadText.push(i + ':' + d.load[i]);
+    for (i = 0; i < d.counts.length; i++) if (d.counts[i] > 0) kindText.push(i + ':' + d.counts[i]);
+    return 'items=' + d.items.length + ';active=' + d.active.join(',') + ';load=' + loadText.join(',') +
+      ';racks=' + d.racks.map(function (r) { return r.kind + ':' + r.capacity; }).join(',') + ';kinds=' + kindText.join(',') +
+      ';total=' + d.total + ';fnv=' + ('00000000' + hash.toString(16)).slice(-8);
+  }
+
+  return { RULES: RULES, generate: generate, summary: summary, maxCount: maxCount, table: table, multipliers: multipliers };
+})();
+/* DEPOT-SIM:END */
+</script>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var tr = function (n, d) { return (+n || 0).toLocaleString('tr-TR', { maximumFractionDigits: d == null ? 2 : d }); };
+  var fmt = function (n) { return '$' + tr(n, 0); };
+  var clone = function (o) { return JSON.parse(JSON.stringify(o)); };
+  var num = function (v) { v = +v; return isFinite(v) ? v : 0; };
+  var r2 = function (v) { return Math.round(v * 100) / 100; };
+  var r4 = function (v) { return Math.round(v * 10000) / 10000; };
+
+  var DEFAULT_TIERS = [
+    { id: 'cok-kotu', name: 'Çok kötü', color: '#7d8590' },
+    { id: 'kotu', name: 'Kötü', color: '#a0805a' },
+    { id: 'orta', name: 'Orta', color: '#4f8fb8' },
+    { id: 'iyi', name: 'İyi', color: '#3fa17a' },
+    { id: 'cok-iyi', name: 'Çok iyi', color: '#8a63d2' },
+    { id: 'destansi', name: 'Destansı', color: '#d6478f' },
+    { id: 'efsanevi', name: 'Efsanevi', color: '#e0a526' }
+  ];
+  var OK_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+  var TABS = ['inv', 'add', 'sim', 'tiers'];
+  var GAME_TIERS = ['Çok kötü', 'Kötü', 'Orta', 'İyi', 'Çok iyi', 'Destansı', 'Efsanevi'];
+
+  var S = {
+    db: null, assets: null, sample: null, downloads: null, canWrite: true,
+    ai: 'loading', aiImages: false, loadErr: '',
+    tiers: clone(DEFAULT_TIERS), items: [], itemMap: {}, itemsLoaded: false,
+    draft: clone(DEFAULT_TIERS), dirty: false,
+    q: '', sort: 'new', tab: 'inv', simSeed: (Math.random() * 4294967296) | 0,
+    queue: [], busy: false, ctl: null, qid: 0, modeTouched: false, stopFlag: false,
+    view: null, pd: null, pdirty: false, pdel: false, pleave: false, pai: false
+  };
+
+  /* ---------- yardımcılar ---------- */
+  function colorOf(t) { return t && /^#[0-9a-f]{6}$/i.test(t.color || '') ? t.color : '#7d8590'; }
+  function rp(v) { v = num(v); var st = v < 100 ? 1 : (v < 1000 ? 5 : 10); return Math.max(0, Math.round(v / st) * st); }
+  function normTier(t) { return { id: String(t.id), name: String(t.name || 'Sınıf'), color: colorOf(t) }; }
+  function tagHtml(t) { return '<span class="tag" style="--tc:' + colorOf(t) + '">' + esc(t ? t.name : 'Sınıfsız') + '</span>'; }
+  function imgUrl(id) { return '/_blob/' + encodeURIComponent(id); }
+  function canEdit() { return S.canWrite && !!S.db; }
+  function toast(msg) {
+    var el = $('#toast'); el.textContent = msg; el.hidden = false;
+    clearTimeout(toast.t); toast.t = setTimeout(function () { el.hidden = true; }, 3600);
+  }
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+  function errText(e) {
+    var c = e && e.code;
+    var m = {
+      not_granted: 'Claude izni verilmedi.', rate_limited: 'Çok sık istek gitti, biraz bekleyip tekrar dene.',
+      quota_exceeded: 'Depolama kotası doldu.', quota_or_state: 'Depolama kotası doldu.', too_large: 'Dosya çok büyük.',
+      unsupported_type: 'Bu dosya türü desteklenmiyor.', invalid_json: 'Yapay zekanın cevabı okunamadı.', refused: 'Yapay zeka bu girdiyi değerlendirmedi.',
+      image_rejected: 'Görsel kabul edilmedi.', session_expired: 'Oturum doldu, sayfayı yenile.', invalid_argument: 'Bu işlem için yazma iznin yok.',
+      images_unavailable: 'Bu görünüm görsel göndermiyor.', sampling_disabled: 'Claude bu hesapta kapalı.', capability_disabled: 'Yapay zeka bu görünümde kapalı.'
+    };
+    return m[c] || ('Hata' + (c ? ' (' + c + ')' : '') + '.');
+  }
+  async function cap(name) { try { return (window.claude && window.claude.use) ? await window.claude.use(name) : null; } catch (e) { return null; } }
+
+  /* ---------- sekmeler ---------- */
+  function setTab(name) {
+    S.tab = name; lsSet('kd-tab', name);
+    $$('.tab').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.tab === name ? 'true' : 'false'); });
+    TABS.forEach(function (n) { $('#p-' + n).hidden = n !== name; });
+    if (name === 'sim') renderSim();
+  }
+  $('.tabs').addEventListener('click', function (e) { var b = e.target.closest('.tab'); if (b) setTab(b.dataset.tab); });
+  document.addEventListener('error', function (e) { if (e.target && e.target.tagName === 'IMG') e.target.classList.add('broken'); }, true);
+
+  /* ---------- sınıf verisi ---------- */
+  function defClass(t) { return { tierId: t.id, chance: 0, pmin: 0, pmax: 0 }; }
+  function isClassified(it) { return Array.isArray(it.classes) && it.classes.length > 0; }
+  function classesOf(it) {
+    var by = {}; (Array.isArray(it.classes) ? it.classes : []).forEach(function (c) { by[c.tierId] = c; });
+    return S.tiers.map(function (t) {
+      var c = by[t.id];
+      return c ? { tierId: t.id, chance: num(c.chance), pmin: num(c.pmin), pmax: num(c.pmax) } : defClass(t);
+    });
+  }
+  function spans(list) {
+    var act = list.filter(function (c) { return c.chance > 0; }); if (!act.length) act = list;
+    var o = { pmin: Infinity, pmax: 0 };
+    act.forEach(function (c) { o.pmin = Math.min(o.pmin, c.pmin); o.pmax = Math.max(o.pmax, c.pmax); });
+    if (!isFinite(o.pmin)) o.pmin = 0;
+    return o;
+  }
+  /* item düzeyinde sabit ölçüler: kilo ve boyutlar sınıfa göre değişmez */
+  function dimsOf(it) {
+    var kg = num(it.kg);
+    if (!(kg > 0) && Array.isArray(it.classes)) {
+      var a = it.classes.filter(function (c) { return num(c.wmax) > 0; });
+      if (a.length) kg = r2(a.reduce(function (x, c) { return x + (num(c.wmin) + num(c.wmax)) / 2; }, 0) / a.length);
+    }
+    return { kg: kg > 0 ? kg : 0, h: num(it.h), w: num(it.w), d: num(it.d), base: num(it.base), coll: num(it.coll), maxc: Math.min(20, Math.max(0, Math.round(num(it.maxc)))) };
+  }
+  /* oyundaki kuralın aynısı: büyük ve ağır itemden bir depoda az çıkar */
+  function capOf(dm) { return DepotSim.maxCount({ heightCm: dm.h, widthCm: dm.w, depthCm: dm.d, kg: dm.kg, maxCount: dm.maxc }); }
+  function sizeText(dm) { return dm.h > 0 && dm.w > 0 && dm.d > 0 ? tr(dm.h, 0) + ' × ' + tr(dm.w, 0) + ' × ' + tr(dm.d, 0) + ' cm' : ''; }
+  var HERO_CM = 170;
+  /* fiyat eğrisi: orta sınıf = piyasa değeri. Yukarı doğru çarpan ivmelenir, efsanevi koleksiyon potansiyeline göre çok özel olur */
+  function lerpLog(arr, k, n) {
+    if (n <= 1) return arr[Math.min(2, arr.length - 1)];
+    var pos = k / (n - 1) * (arr.length - 1), i = Math.min(arr.length - 2, Math.floor(pos)), f = pos - i;
+    return Math.exp(Math.log(arr[i]) * (1 - f) + Math.log(arr[i + 1]) * f);
+  }
+  function multipliers(coll, n) {
+    var c = Math.min(10, Math.max(0, num(coll))), L = [-0.65, -0.35, 0], acc = 0;
+    [0.40, 0.45, 0.48 + 0.05 * c, 0.50 + 0.10 * c].forEach(function (st) { acc += st; L.push(acc); });
+    var m7 = L.map(Math.exp), out = [];
+    for (var k = 0; k < n; k++) out.push(lerpLog(m7, k, n));
+    return out;
+  }
+  function priceRange(base, coll, k, n) {
+    var m = multipliers(coll, n)[k], center = Math.max(1, num(base)) * m, pos = n > 1 ? k / (n - 1) : 0.5, sp = 0.09 + 0.16 * pos * pos;
+    var lo = rp(center * (1 - sp)), hi = rp(center * (1 + sp));
+    return [Math.max(1, lo), Math.max(Math.max(1, lo), hi)];
+  }
+  var CH7 = [30, 26, 20, 13, 7, 3.5, 0.5];
+  function defaultChances(n) { var a = []; for (var k = 0; k < n; k++) a.push(lerpLog(CH7, k, n)); var t = a.reduce(function (x, y) { return x + y; }, 0); return a.map(function (v) { return r4(v / t * 100); }); }
+  function buildClasses(base, coll, chances) {
+    var n = S.tiers.length, dc = defaultChances(n), ch = S.tiers.map(function (t, k) { var v = chances && chances[t.id]; return v != null && isFinite(+v) && +v >= 0 ? +v : dc[k]; });
+    var tot = ch.reduce(function (x, y) { return x + y; }, 0) || 1;
+    return S.tiers.map(function (t, k) { var pr = priceRange(base, coll, k, n); return { tierId: t.id, chance: r4(ch[k] / tot * 100), pmin: pr[0], pmax: pr[1] }; });
+  }
+
+  /* ---------- künye ---------- */
+  function renderStats() {
+    var n = S.items.length, k = S.items.filter(isClassified).length, mx = 0;
+    S.items.forEach(function (i) { if (isClassified(i)) mx = Math.max(mx, spans(classesOf(i)).pmax); });
+    var rows = [['Item', n], ['Sınıflandırılmış', n ? k + ' / ' + n : '–'], ['En yüksek fiyat', mx ? fmt(mx) : '–'], ['Sınıf', S.tiers.length]];
+    $('#stats').innerHTML = rows.map(function (r) { return '<div class="stat"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('');
+  }
+
+  /* ---------- item indeksi ---------- */
+  function sortedItems() {
+    var q = S.q.trim().toLocaleLowerCase('tr');
+    var a = S.items.filter(function (i) { return !q || (String(i.name || '') + ' ' + String(i.note || '')).toLocaleLowerCase('tr').indexOf(q) >= 0; });
+    var sp = function (i) { return spans(classesOf(i)); };
+    var by = {
+      new: function (x, y) { return (y.createdAt || 0) - (x.createdAt || 0); },
+      old: function (x, y) { return (x.createdAt || 0) - (y.createdAt || 0); },
+      name: function (x, y) { return String(x.name).localeCompare(String(y.name), 'tr'); },
+      hi: function (x, y) { return sp(y).pmax - sp(x).pmax; },
+      lo: function (x, y) { return sp(x).pmin - sp(y).pmin; },
+      kg: function (x, y) { return dimsOf(y).kg - dimsOf(x).kg; }
+    };
+    return a.sort(by[S.sort] || by.new);
+  }
+  function renderList() {
+    $('#export').hidden = !(S.downloads && S.items.length);
+    var oldN = S.items.filter(function (i) { return isClassified(i) && !(num(i.base) > 0); }).length;
+    $('#inv-note').innerHTML = !S.db ? '<div class="note warn">Kayıtlı veriye ulaşılamadı. Sayfayı giriş yapmış bir hesapla aç.</div>' : (oldN ? '<div class="note warn">' + oldN + ' itemin fiyatı eski yöntemle hesaplanmış (“Eski fiyat” etiketi). Sayfasını açıp “Yapay zeka sınıflandırsın”a bas.</div>' : '');
+    var el = $('#grid');
+    if (!S.itemsLoaded) { el.innerHTML = '<div class="empty">Itemler yükleniyor…</div>'; return; }
+    if (S.loadErr) { el.innerHTML = '<div class="empty"><b>Itemler okunamadı</b>' + esc(S.loadErr) + '<br><button class="btn sm" type="button" id="reload">Yeniden dene</button></div>'; return; }
+    if (!S.items.length) { el.innerHTML = '<div class="empty"><b>Henüz item yok</b>İlk görseli “Item ekle” sekmesinden at. Her item kendi wiki sayfasını alır.</div>'; return; }
+    var list = sortedItems();
+    if (!list.length) { el.innerHTML = '<div class="empty">Aramaya uyan item yok.</div>'; return; }
+    el.innerHTML = list.map(function (i) {
+      var cl = classesOf(i), cf = isClassified(i), sp = spans(cl), tot = cl.reduce(function (a, c) { return a + c.chance; }, 0);
+      var body = cf
+        ? '<span class="rng"><b>' + fmt(sp.pmin) + ' – ' + fmt(sp.pmax) + '</b><span>' + (dimsOf(i).kg ? tr(dimsOf(i).kg) + ' kg' : 'Kilo yok') + (dimsOf(i).h ? ' · ' + tr(dimsOf(i).h, 0) + ' cm' : '') + ' · en çok ' + capOf(dimsOf(i)) + ' adet</span></span>' +
+          '<span class="mbar">' + cl.map(function (c, k) { return '<span style="--tc:' + colorOf(S.tiers[k]) + ';flex:' + (tot > 0 ? c.chance : 1) + ' 1 0"></span>'; }).join('') + '</span>'
+        : '<span class="hint">Sınıflandırılmadı</span>';
+      return '<button class="card" type="button" data-id="' + esc(i.id) + '"><span class="pic"><img src="' + imgUrl(i.assetId) + '" alt="" loading="lazy"></span>' +
+        '<span class="src' + (cf && num(i.base) > 0 ? '' : ' todo') + '">' + (cf ? (!(num(i.base) > 0) ? 'Eski fiyat' : (i.source === 'ai' ? 'AI' : 'Elle')) : 'Boş') + '</span>' +
+        '<span class="meta"><span class="nm">' + esc(i.name) + '</span>' + body + '</span></button>';
+    }).join('');
+  }
+  $('#q').addEventListener('input', function (e) { S.q = e.target.value; renderList(); });
+  $('#sort').addEventListener('change', function (e) { S.sort = e.target.value; renderList(); });
+  $('#grid').addEventListener('click', function (e) { var c = e.target.closest('.card'); if (c) openPage(c.dataset.id); });
+
+  /* ---------- dışa aktarım ---------- */
+  function exportItems() {
+    return S.items.map(function (i) {
+      var dm = dimsOf(i);
+      return {
+        id: i.id, name: i.name, note: i.note || '', analysis: i.analysis || '', classified: isClassified(i), assetId: i.assetId || '',
+        kg: dm.kg, heightCm: dm.h, widthCm: dm.w, depthCm: dm.d, baseValue: dm.base, collectorScore: dm.coll, maxPerRound: capOf(dm),
+        classes: isClassified(i) ? classesOf(i).map(function (c, k) { return { tier: S.tiers[k].name, chancePercent: c.chance, priceMin: c.pmin, priceMax: c.pmax }; }) : []
+      };
+    });
+  }
+  async function saveFile(name, data) {
+    try { await S.downloads.save({ filename: name, data: data }); toast('Dosya kaydedildi.'); }
+    catch (e) { if (e && e.code !== 'declined') toast('Dosya kaydedilemedi.'); }
+  }
+  $('#exp-json').addEventListener('click', function () { saveFile('kasa-defteri.json', JSON.stringify({ tiers: S.tiers, items: exportItems() }, null, 2)); });
+  $('#exp-csv').addEventListener('click', function () {
+    var q = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+    var lines = [['item', 'kilo', 'boy_cm', 'en_cm', 'derinlik_cm', 'sinif', 'cikma_sansi_yuzde', 'fiyat_min', 'fiyat_max']];
+    exportItems().forEach(function (it) {
+      var pre = [it.name, it.kg, it.heightCm, it.widthCm, it.depthCm];
+      if (!it.classes.length) lines.push(pre.concat(['', '', '', '']));
+      it.classes.forEach(function (c) { lines.push(pre.concat([c.tier, c.chancePercent, c.priceMin, c.priceMax])); });
+    });
+    saveFile('kasa-defteri.csv', '﻿' + lines.map(function (l) { return l.map(q).join(','); }).join('\n'));
+  });
+
+  /* ---------- yapay zeka ---------- */
+  function aiOk() { return !!S.sample && S.ai === 'ok'; }
+  function aiMessage() {
+    if (S.ai === 'loading') return 'Yapay zeka hazırlanıyor…';
+    if (S.ai === 'off') return 'Claude bu görünümde bağlanamadı. Linki tarayıcıda açıp dene ya da aşağıdan tekrar dene.';
+    if (S.ai === 'denied') return 'Claude kullanımı reddedilmiş. Sayfanın üstündeki izinler (Permissions) menüsünden yapay zekaya izin ver, sonra “Tekrar dene”ye bas.';
+    if (!S.aiImages) return 'Bu görünüm görsel göndermeye izin vermiyor. Yapay zeka adı ve detayı okuyarak sınıflandırır, o yüzden adı iyi yaz (örn. “Ahşap masa”).';
+    return 'Görseli ve adı okur. Eşyanın piyasa değerini, koleksiyon potansiyelini, sabit kilo ve ölçülerini bulur, sınıf fiyatlarını ve şanslarını buna göre çıkarır. Her item için bir Claude çağrısı yapılır, kullanım senin hesabından düşer.';
+  }
+  async function initAI() {
+    S.ai = 'loading'; S.aiImages = false; renderAddState(); updateAIButton();
+    var perm = await cap('permissions');
+    if (perm) {
+      try {
+        var st = await perm.state('sample');
+        if (st === 'prompt') { await perm.request(['sample']); st = await perm.state('sample'); }
+        if (st === 'denied') { S.ai = 'denied'; S.sample = null; renderAddState(); updateAIButton(); return; }
+      } catch (e) { }
+    }
+    S.sample = await cap('sample');
+    if (!S.sample) { S.ai = 'off'; }
+    else {
+      S.ai = 'ok';
+      try { var lim = await S.sample.limits(); S.aiImages = !!(lim && lim.images); } catch (e) { S.aiImages = false; }
+    }
+    if (aiOk() && !S.modeTouched) $('#mode-ai').checked = true;
+    renderAddState(); updateAIButton();
+  }
+  function clampN(v, lo, hi) { v = num(v); return Math.min(hi, Math.max(lo, v)); }
+  function normalizeAI(r) {
+    var base = num(r && (r.baseValue != null ? r.baseValue : r.base));
+    if (!(base > 0)) throw { code: 'invalid_json' };
+    var coll = clampN(r.collector, 0, 10);
+    var ch = {};
+    (Array.isArray(r.chances) ? r.chances : []).forEach(function (c) {
+      if (!c) return; var key = String(c.tierId || ''), t = S.tiers.filter(function (x) { return x.id === key || x.name.toLocaleLowerCase('tr') === String(c.tier || c.name || key).toLocaleLowerCase('tr'); })[0];
+      if (t) ch[t.id] = num(c.chance);
+    });
+    var kg = clampN(r.kg, 0, 800), h = clampN(r.heightCm, 0, 400), w = clampN(r.widthCm, 0, 400), d = clampN(r.depthCm, 0, 400);
+    return {
+      name: String(r.name || '').trim().slice(0, 80), analysis: String(r.analysis || '').slice(0, 420),
+      base: rp(base), coll: r2(coll), kg: r2(kg), h: Math.round(h), w: Math.round(w), d: Math.round(d),
+      classes: buildClasses(base, coll, ch)
+    };
+  }
+  function marketRefs(excludeId) {
+    var rows = S.items.filter(function (i) { return i.id !== excludeId && num(i.base) > 0; }).slice(0, 12).map(function (i) {
+      return '- ' + String(i.name).slice(0, 50) + ': orta sınıf $' + num(i.base) + ', koleksiyon puanı ' + num(i.coll);
+    });
+    return rows.length ? '\nDefterde zaten kayıtlı itemler (tutarlı kal, ama kopyalama):\n' + rows.join('\n') + '\n' : '';
+  }
+  async function classify(blob, name, note, signal, selfId) {
+    var useImg = !!(blob && S.aiImages);
+    var prompt = 'Sen bir “kasa avcılığı simülatörü” oyununun wiki’si için çalışan, antika ve ikinci el piyasasını iyi bilen bir değerleme uzmanısın. Oyuncular depo ve kasa açıp gerçek hayattaki eşyaları buluyor ve satıyor. Fiyatlar gerçekçi, bizim ikinci el ve antika piyasamıza uygun dolar fiyatları olmalı.\n\n' +
+      'Eşya adı: ' + (name ? '“' + name + '”' : '(verilmedi)') + '\n' + (note ? 'Detay: ' + note + '\n' : '') +
+      (useImg ? 'Ekteki görsel bu eşyanın kendisi. Ne olduğunu, malzemesini, işçiliğini, süsünü ve boyutunu ondan anla.\n' : 'Görsel gönderilemedi, sadece addan ve detaydan yararlan.\n') +
+      '\nGörev: Eşyayı tanı ve şu değerleri ver. Sınıf bazlı fiyatları sen yazmıyorsun, onları sistem senin verdiğin değerlerden hesaplıyor.\n\n' +
+      '1) baseValue: Bu eşyanın “orta” durumdaki tipik gerçek piyasa değeri (dolar). En önemli sayı bu. Önce eşyanın ne olduğunu doğru belirle. DEĞERİ BOYUTA YA DA AĞIRLIĞA GÖRE VERME: büyük ve ağır olmak değer değildir. Sade, seri üretim mobilya ve eşyalar ucuzdur. ANTİKA ya da gerçekten eski olan eşyalara belirgin ekstra değer yükle: aynı türün modern ve sıradan halinin birkaç katı olur. El işçiliği, süslü ya da oymalı, saat, mekanik parça, silah ve kılıç türü koleksiyon eşyası, porselen, pirinç, gümüş, kristal, marka ve imza gibi şeyler değeri ciddi artırır.\n' +
+      '   Kalibrasyon için orta durumdaki örnek değerler (kopyalama, mantığı al): plastik tabure 10 | hasır sandalye 35 | modern kahve makinesi 20 | ikinci el ahşap yuvarlak yemek masası 150 | pirinç mumluk çifti 50 | antika ahşap pipo 35 | antika biber değirmeni 90 | tabanca replikası 120 | koleksiyonluk ya da antika tabanca 250 | dekoratif ejderhalı katana 300 | antika çin vitrini 450 | antika boy saati (grandfather clock) 450. Bu örnekler gerçek ikinci el ve müzayede satışlarından (istenen fiyat değil, gerçekleşen satış fiyatı) alındı; en üst sınıflar ise aynı türün en pahalı gerçek satışlarına yaklaşmalı (örneğin boy saati 6-12 bin dolar, katana 4-7 bin dolar)\n' +
+      '2) collector: Koleksiyon ve nadirlik potansiyeli, 0 ile 10 arası. Üst sınıflardaki (destansı, efsanevi) fiyat sıçramasını bu belirler. Sıradan seri üretim eşya 0-2, süslü ya da antika dekor 3-5, ciddi koleksiyon parçası 6-8, gerçekten nadir ve kıymetli tür 9-10. Örnekler: plastik tabure 0, ahşap yuvarlak masa 1, mumluk 4, antika biber değirmeni 5, antika vitrin 6, tabanca 6, ejderhalı katana 7, antika boy saati 7.\n' +
+      '3) Gerçek ve SABİT ölçüler: kg (ağırlık), heightCm (boy / yükseklik), widthCm (en / genişlik), depthCm (derinlik). Bunlar eşyanın kendisinin ölçüsüdür, durum sınıfıyla değişmez. Oyun karakteri 170 cm boyunda normal bir insan; eşyayı gerçek dünyadaki standart boyutuyla ver (örneğin yemek masası yaklaşık 75 cm yüksek, boy saati 200 cm civarı).\n' +
+      '4) chances: Her sınıf için çıkma şansı. Sınıflar yıpranmışlıktan en iyiye sıralı: ' + S.tiers.map(function (t) { return 'id=' + t.id + ' (' + t.name + ')'; }).join(', ') + '. Toplam 100 olsun. Başlangıç öneri: ' + defaultChances(S.tiers.length).join(', ') + '. Eşyaya göre ayarlayabilirsin; sıradan eşyada üst sınıflar daha da nadir, gerçek koleksiyon parçasında biraz daha olası olabilir. Efsanevi her zaman çok nadir olsun.\n' +
+      '5) analysis: en fazla iki kısa Türkçe cümle. Eşyanın ne olduğunu ve değeri belirleyen şeyi yaz.\n' +
+      (name ? '' : '6) name: kısa bir Türkçe ad öner.\n') + marketRefs(selfId) +
+      '\nSadece şu JSON nesnesini döndür: {"name": string, "analysis": string, "baseValue": number, "collector": number, "kg": number, "heightCm": number, "widthCm": number, "depthCm": number, "chances": [{"tierId": string, "chance": number}]}';
+    var opts = { signal: signal, cache: false };
+    if (useImg) opts.images = blob;
+    var r = await S.sample.json(prompt, opts);
+    if (!r || typeof r !== 'object') throw { code: 'invalid_json' };
+    return normalizeAI(r);
+  }
+  function imgToBlob(img) {
+    return new Promise(function (res, rej) {
+      try {
+        var w = img.naturalWidth, h = img.naturalHeight; if (!w || !h) return rej({ code: 'image_rejected' });
+        var k = Math.min(1, 1600 / Math.max(w, h)), c = document.createElement('canvas');
+        c.width = Math.round(w * k); c.height = Math.round(h * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(function (b) { b ? res(b) : rej({ code: 'image_rejected' }); }, 'image/jpeg', 0.9);
+      } catch (e) { rej({ code: 'image_rejected' }); }
+    });
+  }
+  function markAIError(e) {
+    var c = e && e.code;
+    if (c === 'not_granted') { S.ai = 'denied'; renderAddState(); updateAIButton(); }
+    if (c === 'capability_disabled' || c === 'sampling_disabled') { S.ai = 'off'; renderAddState(); updateAIButton(); }
+  }
+
+  /* ---------- item ekleme ---------- */
+  function mode() { var r = $('input[name=mode]:checked'); return r ? r.value : 'blank'; }
+  function renderAddState() {
+    var ok = aiOk();
+    $('#mode-ai').disabled = !ok;
+    $('#mode-ai-wrap').dataset.off = ok ? '0' : '1';
+    $('#ai-small').textContent = aiMessage();
+    $('#ai-retry').hidden = !(S.ai === 'off' || S.ai === 'denied');
+    if (!ok && mode() === 'ai') $('#mode-blank').checked = true;
+    var note = '';
+    if (!S.assets) note = 'Görsel yüklemek için yazma iznin olması gerekir. Bu görünümde yalnızca bakabilirsin.';
+    else if (!S.db) note = 'Kayıtlı veriye ulaşılamadı, item eklenemez.';
+    $('#add-note').innerHTML = note ? '<div class="note warn">' + note + '</div>' : '';
+    $('#files').disabled = !S.assets || !S.db;
+    var waiting = S.queue.filter(function (q) { return q.status === 'wait'; }).length;
+    $('#go').disabled = S.busy || !waiting || !S.assets || !S.db;
+    $('#go').textContent = waiting ? 'Ekle (' + waiting + ')' : 'Ekle';
+    $('#stop').hidden = !S.busy;
+    $('#clear').hidden = S.busy || !S.queue.some(function (q) { return q.status === 'done' || q.status === 'err'; });
+  }
+  $$('input[name=mode]').forEach(function (r) { r.addEventListener('change', function () { S.modeTouched = true; }); });
+  $('#ai-again').addEventListener('click', function () { initAI(); });
+  function renderQueue() {
+    $('#queue').innerHTML = S.queue.map(function (q) {
+      var cls = q.status === 'done' ? 'ok' : q.status === 'err' ? 'err' : (q.status === 'up' || q.status === 'ai') ? 'busy' : '';
+      var txt = q.status === 'wait' ? 'Sırada' : q.status === 'up' ? 'Yükleniyor…' : q.status === 'ai' ? 'Yapay zeka sınıflandırıyor…' : q.msg;
+      return '<div class="qrow"><img src="' + q.url + '" alt="">' +
+        '<div style="min-width:0"><input type="text" data-name="' + q.id + '" value="' + esc(q.name) + '" placeholder="Item adı" aria-label="Item adı"' + (q.status !== 'wait' ? ' disabled' : '') + '>' +
+        '<div class="qs ' + cls + '">' + esc(txt) + '</div></div>' +
+        '<div class="qact">' + (q.status === 'wait' && !S.busy ? '<button class="btn sm" type="button" data-rm="' + q.id + '">Çıkar</button>' : '') +
+        (q.status === 'done' && q.itemId ? '<button class="btn sm" type="button" data-openitem="' + esc(q.itemId) + '">Sayfayı aç</button>' : '') + '</div></div>';
+    }).join('');
+    renderAddState();
+  }
+  function addFiles(files) {
+    var bad = 0;
+    Array.prototype.forEach.call(files, function (f) {
+      if (OK_TYPES.indexOf(f.type) < 0) { bad++; return; }
+      S.queue.push({ id: ++S.qid, file: f, url: URL.createObjectURL(f), name: f.name.replace(/\.[^.]+$/, '').replace(/_+/g, ' ').trim(), status: 'wait', msg: '', itemId: null });
+    });
+    if (bad) toast(bad + ' dosya atlandı. Yalnızca PNG, JPEG, WebP ve GIF olur.');
+    renderQueue();
+  }
+  $('#files').addEventListener('change', function (e) { addFiles(e.target.files); e.target.value = ''; });
+  var drop = $('#drop');
+  ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
+  drop.addEventListener('drop', function (e) { if (S.assets && S.db && e.dataTransfer) addFiles(e.dataTransfer.files); });
+  $('#queue').addEventListener('input', function (e) {
+    var id = e.target.dataset && e.target.dataset.name; if (!id) return;
+    var q = S.queue.filter(function (x) { return String(x.id) === id; })[0]; if (q) q.name = e.target.value;
+  });
+  $('#queue').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-rm]');
+    if (b) { S.queue = S.queue.filter(function (x) { return String(x.id) !== b.dataset.rm; }); return renderQueue(); }
+    var o = e.target.closest('[data-openitem]'); if (o) { setTab('inv'); openPage(o.dataset.openitem); }
+  });
+  $('#clear').addEventListener('click', function () { S.queue = S.queue.filter(function (q) { return q.status === 'wait'; }); renderQueue(); });
+  $('#stop').addEventListener('click', function () { S.stopFlag = true; if (S.ctl) S.ctl.abort(); });
+
+  $('#go').addEventListener('click', async function () {
+    if (S.busy) return;
+    S.busy = true; S.stopFlag = false; renderQueue();
+    var useAI = mode() === 'ai' && aiOk(), made = 0;
+    for (var i = 0; i < S.queue.length; i++) {
+      var q = S.queue[i];
+      if (q.status !== 'wait') continue;
+      if (S.stopFlag) break;
+      q.status = 'up'; renderQueue();
+      var up;
+      try { up = await S.assets.upload(q.file); }
+      catch (e) { q.status = 'err'; q.msg = 'Yüklenemedi. ' + errText(e); renderQueue(); if (e && (e.code === 'quota_or_state' || e.code === 'not_granted')) break; continue; }
+      var name = q.name.trim(), doc = { assetId: up.id, note: '', createdAt: Date.now(), source: '' }, note = '';
+      if (useAI) {
+        q.status = 'ai'; renderQueue();
+        S.ctl = new AbortController();
+        try {
+          var r = await classify(q.file, name, '', S.ctl.signal);
+          doc.classes = r.classes; doc.analysis = r.analysis; doc.source = 'ai'; doc.base = r.base; doc.coll = r.coll; doc.kg = r.kg; doc.h = r.h; doc.w = r.w; doc.d = r.d; if (!name) name = r.name;
+        } catch (e) {
+          if (e && e.code === 'cancelled') { q.status = 'wait'; q.msg = ''; try { await S.assets.delete(up.id); } catch (x) { } break; }
+          note = 'Yapay zeka çalışmadı (' + errText(e).replace(/\.$/, '') + '). Sınıflandırılmadan eklendi, item sayfasından tekrar dene. ';
+          markAIError(e);
+        }
+      }
+      doc.name = name || 'İsimsiz item';
+      try {
+        var ref = S.db.collection('items').doc(); await ref.set(doc);
+        q.status = 'done'; q.itemId = ref.id; made++;
+        q.msg = note + (doc.classes ? 'Eklendi ve sınıflandırıldı.' : 'Eklendi.');
+      } catch (e) { q.status = 'err'; q.msg = 'Kaydedilemedi. ' + errText(e); }
+      renderQueue();
+    }
+    S.busy = false; S.ctl = null; renderQueue();
+    if (made) toast(made + ' item eklendi.');
+  });
+
+  /* ---------- item sayfası ---------- */
+  var KEYS = ['kg', 'h', 'w', 'd', 'base', 'coll', 'maxc'];
+  function openPage(id) {
+    var it = S.itemMap[id]; if (!it) return;
+    var cls = {}; classesOf(it).forEach(function (c) { cls[c.tierId] = c; });
+    var dm = dimsOf(it);
+    S.view = id; S.pdirty = false; S.pdel = false; S.pleave = false;
+    S.pd = { name: it.name || '', note: it.note || '', analysis: it.analysis || '', source: isClassified(it) ? (it.source || 'manual') : '', classes: cls, touched: isClassified(it), kg: dm.kg, h: dm.h, w: dm.w, d: dm.d, base: dm.base, coll: dm.coll, maxc: dm.maxc };
+    setTab('inv'); renderPage(); window.scrollTo(0, 0);
+  }
+  function closePage() { S.view = null; S.pd = null; $('#page-view').hidden = true; $('#list-view').hidden = false; renderList(); renderStats(); }
+  function rowFields(t, c, ed) {
+    var d = ed ? '' : ' disabled';
+    var f = function (key, label, step) { return '<label class="fld"><span>' + label + '</span><input type="number" min="0" step="' + step + '" inputmode="decimal" data-c="' + key + '" value="' + esc(c[key]) + '"' + d + '></label>'; };
+    return '<div class="crow" data-t="' + esc(t.id) + '" style="--tc:' + colorOf(t) + '"><div class="ct">' + tagHtml(t) + '</div>' +
+      f('chance', 'Şans (%)', 'any') + f('pmin', 'Fiyat en az ($)', '1') + f('pmax', 'Fiyat en çok ($)', '1') + '</div>';
+  }
+  function dimsPanel(P, ed) {
+    var d = ed ? '' : ' disabled';
+    var f = function (key, label, step) { return '<label class="fld"><span>' + label + '</span><input type="number" min="0" step="' + step + '" inputmode="decimal" data-k="' + key + '" value="' + esc(P[key]) + '"' + d + '></label>'; };
+    return '<div class="dims"><div class="ttl">Sabit ölçüler ve değer (sınıfa göre değişmez)</div>' +
+      f('kg', 'Kilo (kg)', '0.1') + f('h', 'Boy / yükseklik (cm)', '1') + f('w', 'En / genişlik (cm)', '1') + f('d', 'Derinlik (cm)', '1') +
+      f('base', 'Orta sınıf piyasa değeri ($)', '1') + f('coll', 'Koleksiyon potansiyeli (0–10)', '0.5') + f('maxc', 'Turda en fazla (0 = ölçüden)', '1') +
+      (ed ? '<div class="btnrow"><button class="btn sm" type="button" id="p-calc">Fiyatları bu değerden hesapla</button><span class="hint">Orta sınıf = piyasa değeri. Yukarı çıktıkça artış hızlanır, efsanevi koleksiyon potansiyeline göre çok özel olur.</span></div>' + adjPanel() : '') + '</div>';
+  }
+  /* yapay zekayla fiyat ayarı: ok sayısı kadar büyük adım, adım her zaman sınırlı kalır */
+  var ADJ = { 1: [5, 12], 2: [15, 30], 3: [35, 60] };
+  function adjPanel() {
+    var b = function (dir, n) { return '<button class="btn sm ' + dir + '" type="button" data-adj="' + dir + n + '" title="' + (dir === 'up' ? 'Fiyatı artır' : 'Fiyatı azalt') + ' (yaklaşık %' + ADJ[n][0] + '–' + ADJ[n][1] + ')">' + new Array(n + 1).join(dir === 'up' ? '↑' : '↓') + '</button>'; };
+    return '<div class="adj"><div class="ttl">Fiyatı yapay zekayla ayarla</div>' +
+      '<div class="row">' + b('down', 3) + b('down', 2) + b('down', 1) + '<span class="sepv"></span>' + b('up', 1) + b('up', 2) + b('up', 3) + '</div>' +
+      '<label class="fld note"><span>Yapay zekaya not (isteğe bağlı)</span><input type="text" id="p-adjnote" maxlength="200" placeholder="Örn. bu parça gerçekten antika, ya da bu fazla pahalı kalmış"></label>' +
+      '<div class="hint">Her ok orta sınıf değerini kademeli oynatır: ↑ / ↓ küçük (yaklaşık %5–12), ↑↑ / ↓↓ orta (%15–30), ↑↑↑ / ↓↓↓ büyük (%35–60). Yapay zeka piyasaya bakıp bu aralıkta bir değer seçer, tüm sınıflar buna göre yeniden hesaplanır.</div>' +
+      '<div class="why2" id="p-adjmsg" aria-live="polite"></div></div>';
+  }
+  async function adjustPrice(code) {
+    var P = S.pd; if (!P || S.padj) return;
+    var dir = code.slice(0, code.length - 1) === 'up' ? 1 : -1, lvl = +code.slice(-1), rg = ADJ[lvl];
+    if (!(P.base > 0)) return toast('Önce orta sınıf piyasa değerini yaz ya da yapay zekaya sınıflandırt.');
+    S.padj = true; var btns = $$('.adj .btn'); btns.forEach(function (x) { x.disabled = true; });
+    var msg = $('#p-adjmsg'), pct = (rg[0] + rg[1]) / 2, dcoll = 0, reason = '', viaAI = false;
+    if (msg) msg.textContent = aiOk() ? 'Yapay zeka piyasaya bakıyor…' : '';
+    if (aiOk()) {
+      try {
+        var note = ($('#p-adjnote') || {}).value || '';
+        var cl = S.tiers.map(function (t) { var c = P.classes[t.id]; return t.name + ': şans %' + tr(c.chance, 2) + ', $' + c.pmin + '-' + c.pmax; }).join('\n');
+        var prompt = 'FİYAT AYARI. Sen “kasa avcılığı simülatörü” oyununun wiki’sinde çalışan bir ikinci el ve antika değerleme uzmanısın. Bir itemin fiyat seviyesini kademeli olarak değiştiriyorsun. Fiyatlar gerçek piyasaya (gerçekleşen ikinci el ve müzayede satışlarına) uygun kalmalı.\n\n' +
+          'Item: ' + P.name + '\n' + (P.analysis ? 'Analiz: ' + P.analysis + '\n' : '') + (P.note ? 'Detay: ' + P.note + '\n' : '') +
+          'Orta sınıf piyasa değeri şu an: $' + P.base + '. Koleksiyon puanı: ' + P.coll + '/10.\nSınıf fiyatları şu an:\n' + cl + '\n\n' +
+          'İstek: fiyatı ' + (dir > 0 ? 'ARTIR' : 'AZALT') + '. Adım büyüklüğü ' + lvl + '/3 (' + (lvl === 1 ? 'küçük' : lvl === 2 ? 'orta' : 'büyük') + '). Orta sınıf değerini yüzde ' + rg[0] + ' ile ' + rg[1] + ' arasında ' + (dir > 0 ? 'artır' : 'azalt') + '. Bu aralığın dışına çıkma, yavaş yavaş ilerlenecek. Piyasaya göre aralıkta uygun yüzdeyi sen seç; bu eşyanın gerçek piyasasına zaten yakınsa aralığın alt ucunu, belirgin biçimde uzaksa üst ucunu seç.\n' +
+          'Gerekirse koleksiyon puanını da oynatabilirsin (en fazla ' + (lvl === 1 ? '0' : lvl === 2 ? '0,5' : '1') + ' puan, aynı yönde). Üst sınıfların (destansı, efsanevi) fiyatı bu puana bağlı.\n' +
+          (note ? 'Kullanıcının notu: ' + note.slice(0, 200) + '\n' : '') +
+          '\nSadece şu JSON nesnesini döndür: {"percent": number (pozitif, yüzde ' + rg[0] + '-' + rg[1] + '), "collectorDelta": number (0 ya da yönle aynı işaretli), "reason": string (tek kısa Türkçe cümle)}';
+        var r = await S.sample.json(prompt, { cache: false });
+        var pr0 = num(r && r.percent);
+        if (pr0 > 0) { pct = Math.min(rg[1], Math.max(rg[0], pr0)); viaAI = true; }
+        var maxd = lvl === 1 ? 0 : (lvl === 2 ? 0.5 : 1), cd = num(r && r.collectorDelta);
+        if (cd && (cd > 0) === (dir > 0)) dcoll = Math.min(maxd, Math.abs(cd)) * dir;
+        reason = String((r && r.reason) || '').slice(0, 220);
+      } catch (e) { markAIError(e); reason = 'Yapay zeka cevap vermedi, orta adım uygulandı.'; }
+    } else reason = 'Yapay zeka kullanılamıyor, orta adım uygulandı.';
+    var nb = rp(P.base * (dir > 0 ? 1 + pct / 100 : 1 / (1 + pct / 100)));
+    if (nb === P.base) nb = Math.max(1, P.base + dir);
+    var oldB = P.base, nc = Math.min(10, Math.max(0, r2(P.coll + dcoll)));
+    var chs = {}, tot0 = 0; S.tiers.forEach(function (x) { tot0 += P.classes[x.id].chance; chs[x.id] = P.classes[x.id].chance; });
+    buildClasses(nb, nc, tot0 > 0 ? chs : null).forEach(function (c) { P.classes[c.tierId] = c; });
+    P.base = nb; P.coll = nc; P.touched = true; if (!P.source) P.source = viaAI ? 'ai' : 'manual';
+    S.pdirty = true; S.pleave = false; S.padj = false; refreshInputs(); updatePage();
+    $$('.adj .btn').forEach(function (x) { x.disabled = false; });
+    var m2 = $('#p-adjmsg'); if (m2) m2.textContent = (dir > 0 ? '↑ ' : '↓ ') + 'Orta sınıf $' + oldB + ' → $' + nb + ' (' + (dir > 0 ? '+' : '−') + '%' + tr(pct, 0) + (dcoll ? ', koleksiyon puanı ' + tr(nc, 1) : '') + '). ' + reason + ' Kontrol edip kaydet.';
+  }
+  function renderPage() {
+    var P = S.pd, it = S.itemMap[S.view]; if (!it) return closePage();
+    var ed = canEdit();
+    $('#list-view').hidden = true; var host = $('#page-view'); host.hidden = false;
+    host.innerHTML =
+      '<button class="btn sm back" type="button" id="p-back">← Itemler</button>' +
+      '<div class="ipage"><div class="ileft">' +
+      '<span class="pic big"><img id="p-img" src="' + imgUrl(it.assetId) + '" alt="' + esc(it.name) + '"></span>' +
+      '<label class="fld"><span>Item adı</span><input type="text" id="p-name" value="' + esc(P.name) + '"' + (ed ? '' : ' disabled') + '></label>' +
+      '<label class="fld"><span>Detay</span><textarea id="p-note" placeholder="Bu item hakkında notların"' + (ed ? '' : ' disabled') + '>' + esc(P.note) + '</textarea></label>' +
+      '<div class="why" id="p-why"' + (P.analysis ? '' : ' hidden') + '>' + esc(P.analysis) + '</div></div>' +
+      '<div class="iright"><div class="ihead"><h2>Durumsal sınıflandırma</h2>' +
+      (ed ? '<button class="btn primary" type="button" id="p-ai">Yapay zeka sınıflandırsın</button>' : '') + '</div>' +
+      '<div class="hint" id="p-aihint"></div>' +
+      '<div class="kv" id="p-stats"></div>' + dimsPanel(P, ed) + '<div class="pbar" id="p-bar" aria-hidden="true"></div>' +
+      '<div class="crows" id="p-rows">' + S.tiers.map(function (t) { return rowFields(t, P.classes[t.id] || defClass(t), ed); }).join('') + '</div>' +
+      '<div class="hint" id="p-warn"></div>' +
+      (ed ? '<div class="tools"><button class="btn sm" type="button" id="p-norm">Şansları %100 yap</button></div>' : '') +
+      '</div></div>' +
+      '<div class="foot">' + (ed ? '<span id="p-delwrap"><button class="btn danger" type="button" id="p-del">Item’ı sil</button></span>' : '') +
+      '<span class="sp"></span><span class="hint" id="p-msg"></span>' +
+      (ed ? '<button class="btn" type="button" id="p-cancel">Vazgeç</button><button class="btn primary" type="button" id="p-save">Kaydet</button>' : '') + '</div>';
+    updatePage();
+  }
+  function updateAIButton() {
+    var b = $('#p-ai'), h = $('#p-aihint'); if (!b) return;
+    b.disabled = !aiOk() || S.pai;
+    h.textContent = S.pai ? 'Yapay zeka düşünüyor…' : (aiOk() ? (S.aiImages ? '' : 'Görsel gönderilemiyor, ad ve detaydan sınıflandırır.') : aiMessage());
+  }
+  function updatePage() {
+    var P = S.pd; if (!P) return;
+    var tot = 0, ep = 0, bad = false, pmin = Infinity, pmax = 0;
+    S.tiers.forEach(function (t) { if (!P.classes[t.id]) P.classes[t.id] = defClass(t); });
+    S.tiers.forEach(function (t) {
+      var c = P.classes[t.id]; tot += c.chance;
+      var row = $('.crow[data-t="' + t.id + '"]'); if (!row) return;
+      var off = !(c.chance > 0); row.classList.toggle('off', off);
+      var badP = c.pmin > c.pmax;
+      $$('[data-c=pmin],[data-c=pmax]', row).forEach(function (x) { x.classList.toggle('bad', badP); });
+      if (badP) bad = true;
+    });
+    S.tiers.forEach(function (t) {
+      var c = P.classes[t.id], p = tot > 0 ? c.chance / tot : 0;
+      ep += p * (c.pmin + c.pmax) / 2;
+      if (c.chance > 0) { pmin = Math.min(pmin, c.pmin); pmax = Math.max(pmax, c.pmax); }
+    });
+    var okTot = Math.abs(tot - 100) < 0.0005, vol = P.h > 0 && P.w > 0 && P.d > 0 ? P.h * P.w * P.d / 1000 : 0;
+    $('#p-stats').innerHTML = [
+      ['Toplam şans', '%' + tr(tot, 4), tot > 0 ? (okTot ? 'ok' : 'bad') : 'bad'],
+      ['Fiyat aralığı', isFinite(pmin) ? fmt(pmin) + ' – ' + fmt(pmax) : '–', ''],
+      ['Ortalama fiyat', tot > 0 ? fmt(ep) : '–', ''],
+      ['Kilo', P.kg > 0 ? tr(P.kg) + ' kg' : '–', ''],
+      ['Ölçü (boy × en × der.)', sizeText(P) || '–', ''],
+      ['Hacim', vol ? tr(vol, vol < 10 ? 1 : 0) + ' L' : '–', ''],
+      ['Bir turda en fazla', capOf(P) + ' adet' + (P.maxc > 0 ? ' (elle)' : (P.h + P.w + P.d + P.kg > 0 ? ' (ölçüden)' : ' (ölçü yok)')), ''],
+      ['Karakter boyuna oranı', P.h > 0 ? '%' + tr(P.h / HERO_CM * 100, 0) : '–', '']
+    ].map(function (r) { return '<div class="stat"><span>' + r[0] + '</span><b class="' + r[2] + '">' + r[1] + '</b></div>'; }).join('');
+    $('#p-bar').innerHTML = S.tiers.map(function (t) { return '<span style="--tc:' + colorOf(t) + ';flex:' + Math.max(P.classes[t.id].chance, 0) + ' 1 0" title="' + esc(t.name) + '"></span>'; }).join('');
+    var w = '';
+    if (tot <= 0) w = 'Hiçbir sınıfın şansı yok. Yapay zekaya yaptır ya da değer girip “Fiyatları bu değerden hesapla”ya bas.';
+    else if (!okTot) w = 'Toplam şans %100 değil. “Şansları %100 yap” oranları koruyarak düzeltir.';
+    if (bad) w = (w ? w + ' ' : '') + 'Kırmızı alanlarda en az değer en çoktan büyük.';
+    $('#p-warn').textContent = w; $('#p-warn').className = 'hint' + (w ? ' bad' : '');
+    var sv = $('#p-save'); if (sv) sv.disabled = !S.pdirty;
+    var m = $('#p-msg'); if (m && !S.pleave) { m.textContent = S.pdirty ? 'Kaydedilmemiş değişiklik var.' : ''; m.className = 'hint'; }
+    updateAIButton();
+  }
+  $('#page-view').addEventListener('input', function (e) {
+    var P = S.pd; if (!P) return; var t = e.target;
+    if (t.id === 'p-name') P.name = t.value;
+    else if (t.id === 'p-note') P.note = t.value;
+    else if (t.dataset.k) P[t.dataset.k] = t.value === '' ? 0 : num(t.value);
+    else if (t.dataset.c) {
+      var row = t.closest('.crow'); P.classes[row.dataset.t][t.dataset.c] = t.value === '' ? 0 : num(t.value);
+      P.touched = true; if (!P.source || P.source === 'ai') P.source = 'manual';
+    } else return;
+    S.pdirty = true; S.pleave = false; updatePage();
+  });
+  function refreshInputs() {
+    $$('#p-rows .crow').forEach(function (row) {
+      var c = S.pd.classes[row.dataset.t];
+      $$('[data-c]', row).forEach(function (i) { i.value = c[i.dataset.c]; });
+    });
+    $$('.dims [data-k]').forEach(function (i) { i.value = S.pd[i.dataset.k]; });
+  }
+  $('#page-view').addEventListener('click', async function (e) {
+    var P = S.pd; if (!P) return; var t = e.target;
+    if (t.closest('#p-back')) {
+      if (S.pdirty && !S.pleave && canEdit()) { S.pleave = true; $('#p-msg').textContent = 'Kaydedilmemiş değişiklik var. Çıkmak için tekrar bas.'; $('#p-msg').className = 'hint bad'; return; }
+      return closePage();
+    }
+    if (t.closest('#p-norm')) {
+      var tot = S.tiers.reduce(function (a, x) { return a + P.classes[x.id].chance; }, 0);
+      if (!(tot > 0)) return toast('Bölünecek şans yok. Önce bir değer yaz.');
+      S.tiers.forEach(function (x) { P.classes[x.id].chance = r4(P.classes[x.id].chance / tot * 100); });
+      S.pdirty = true; refreshInputs(); return updatePage();
+    }
+    var ab = t.closest('[data-adj]'); if (ab) return adjustPrice(ab.dataset.adj);
+    if (t.closest('#p-calc')) {
+      if (!(P.base > 0)) return toast('Önce orta sınıf piyasa değerini yaz.');
+      var tot0 = S.tiers.reduce(function (a, x) { return a + P.classes[x.id].chance; }, 0), chs = null;
+      if (tot0 > 0) { chs = {}; S.tiers.forEach(function (x) { chs[x.id] = P.classes[x.id].chance; }); }
+      buildClasses(P.base, P.coll, chs).forEach(function (c) { P.classes[c.tierId] = c; });
+      P.touched = true; if (!P.source || P.source === 'ai') P.source = 'manual';
+      S.pdirty = true; refreshInputs(); return updatePage();
+    }
+    if (t.closest('#p-cancel')) { var id = S.view; return openPage(id); }
+    if (t.closest('#p-del')) {
+      $('#p-delwrap').innerHTML = '<span class="hint">Silinince geri gelmez. </span><button class="btn danger" type="button" id="p-delyes">Evet, sil</button> <button class="btn" type="button" id="p-delno">Vazgeç</button>'; return;
+    }
+    if (t.closest('#p-delno')) { $('#p-delwrap').innerHTML = '<button class="btn danger" type="button" id="p-del">Item’ı sil</button>'; return; }
+    if (t.closest('#p-delyes')) {
+      var it = S.itemMap[S.view];
+      try {
+        await S.db.collection('items').doc(S.view).delete();
+        if (S.assets && it && it.assetId) { try { await S.assets.delete(it.assetId); } catch (x) { } }
+        toast('Item silindi.'); closePage();
+      } catch (er) { toast('Silinemedi. ' + errText(er)); }
+      return;
+    }
+    if (t.closest('#p-save')) return savePage();
+    if (t.closest('#p-ai')) return aiPage();
+  });
+  async function aiPage() {
+    if (!aiOk() || S.pai) return;
+    S.pai = true; updateAIButton();
+    var P = S.pd, blob = null;
+    if (S.aiImages) { try { blob = await imgToBlob($('#p-img')); } catch (e) { blob = null; } }
+    try {
+      var r = await classify(blob, P.name.trim(), P.note.trim(), undefined, S.view);
+      r.classes.forEach(function (c) { P.classes[c.tierId] = c; });
+      P.analysis = r.analysis; P.source = 'ai'; P.touched = true;
+      P.base = r.base; P.coll = r.coll; P.kg = r.kg; P.h = r.h; P.w = r.w; P.d = r.d;
+      if (!P.name.trim() && r.name) { P.name = r.name; $('#p-name').value = r.name; }
+      $('#p-why').hidden = !P.analysis; $('#p-why').textContent = P.analysis;
+      S.pdirty = true; S.pleave = false; refreshInputs(); toast('Sınıflandırma hazır. Kontrol edip kaydet.');
+    } catch (e) { toast('Sınıflandırılamadı. ' + errText(e)); markAIError(e); }
+    S.pai = false; updatePage();
+  }
+  async function savePage() {
+    var P = S.pd, msg = '';
+    if (!P.name.trim()) msg = 'Itemin bir adı olmalı.';
+    var list = S.tiers.map(function (t) { var c = P.classes[t.id]; return { tierId: t.id, chance: Math.max(0, num(c.chance)), pmin: Math.max(0, num(c.pmin)), pmax: Math.max(0, num(c.pmax)) }; });
+    list.forEach(function (c, k) { if (c.pmin > c.pmax) msg = S.tiers[k].name + ': fiyat en az değeri en çoktan büyük olamaz.'; });
+    if (msg) { $('#p-msg').textContent = msg; $('#p-msg').className = 'hint bad'; return; }
+    var patch = { name: P.name.trim(), note: P.note.trim(), updatedAt: Date.now() };
+    KEYS.forEach(function (k) { patch[k] = Math.max(0, num(P[k])); });
+    patch.maxc = Math.min(20, Math.round(patch.maxc));
+    if (P.touched) { patch.classes = list; patch.analysis = P.analysis || ''; patch.source = P.source || 'manual'; }
+    $('#p-save').disabled = true;
+    try { await S.db.collection('items').doc(S.view).update(patch); S.pdirty = false; toast('Kaydedildi.'); renderPage(); }
+    catch (e) { toast('Kaydedilemedi. ' + errText(e)); $('#p-save').disabled = false; }
+  }
+
+  /* ---------- sınıflar ---------- */
+  function renderTierLegend() {
+    $('#plegend').innerHTML = S.draft.map(function (t, i) { return '<span style="--tc:' + colorOf(t) + '"><i></i>' + (i + 1) + '. ' + esc(t.name) + '</span>'; }).join('');
+  }
+  function renderTiers() {
+    var counts = {}; S.items.forEach(function (i) { if (isClassified(i)) i.classes.forEach(function (c) { if (num(c.chance) > 0) counts[c.tierId] = (counts[c.tierId] || 0) + 1; }); });
+    var ro = !canEdit();
+    $('#trows').innerHTML = S.draft.map(function (t, i) {
+      var dis = ro ? ' disabled' : '';
+      return '<div class="trow" data-i="' + i + '">' +
+        '<input type="color" data-f="color" value="' + colorOf(t) + '" aria-label="Renk"' + dis + '>' +
+        '<label class="fld nm2"><span>Sınıf adı</span><input type="text" data-f="name" value="' + esc(t.name) + '"' + dis + '></label>' +
+        '<div class="cnt">' + (counts[t.id] || 0) + ' itemde var</div>' +
+        '<div class="acts"><button class="btn sm" type="button" data-a="up" aria-label="Yukarı taşı"' + (i === 0 || ro ? ' disabled' : '') + '>↑</button>' +
+        '<button class="btn sm" type="button" data-a="down" aria-label="Aşağı taşı"' + (i === S.draft.length - 1 || ro ? ' disabled' : '') + '>↓</button>' +
+        '<button class="btn sm danger" type="button" data-a="del" aria-label="Sınıfı sil"' + dis + '>Sil</button></div></div>';
+    }).join('');
+    renderTierLegend(); updateTierButtons(); renderTierGame();
+  }
+  function renderTierGame() {
+    var el = $('#t-game'); if (!el) return;
+    var names = S.draft.map(function (t) { return String(t.name || '').trim().toLocaleLowerCase('tr'); });
+    var same = names.length === GAME_TIERS.length && GAME_TIERS.every(function (n, i) { return n.toLocaleLowerCase('tr') === names[i]; });
+    el.innerHTML = same ? '<div class="note">Sınıflar oyundakiyle aynı: oyun kataloğu olduğu gibi içe aktarılır.</div>'
+      : (S.draft.length !== GAME_TIERS.length
+        ? '<div class="note warn">Oyun tam ' + GAME_TIERS.length + ' sınıf bekler, burada ' + S.draft.length + ' var. Sayı yedi olana kadar oyun kataloğu indirilemez.</div>'
+        : '<div class="note warn">Sınıf adları oyundakinden farklı. Sıra aynı olduğu için oyun yine sırayla eşleştirir, ama oyunda “' + GAME_TIERS.join(', ') + '” görünür. “Varsayılanlara dön” bunu düzeltir.</div>');
+  }
+  function updateTierButtons() {
+    var ro = !canEdit();
+    $('#t-save').disabled = !S.dirty || ro; $('#t-cancel').disabled = !S.dirty;
+    $('#t-addrow').disabled = ro; $('#t-reset').disabled = ro;
+    $('#t-msg').textContent = ro ? 'Sınıfları değiştirmek için yazma iznin olması gerekir.' : (S.dirty ? 'Kaydedilmemiş değişiklik var.' : '');
+    $('#t-msg').className = 'hint';
+  }
+  $('#trows').addEventListener('input', function (e) {
+    var row = e.target.closest('.trow'), f = e.target.dataset.f; if (!row || !f) return;
+    S.draft[+row.dataset.i][f] = e.target.value;
+    S.dirty = true; renderTierLegend(); updateTierButtons();
+  });
+  $('#trows').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-a]'); if (!b) return;
+    var i = +b.closest('.trow').dataset.i, a = b.dataset.a, d = S.draft;
+    if (a === 'del') d.splice(i, 1);
+    if (a === 'up' && i > 0) { var x = d[i]; d[i] = d[i - 1]; d[i - 1] = x; }
+    if (a === 'down' && i < d.length - 1) { var y = d[i]; d[i] = d[i + 1]; d[i + 1] = y; }
+    S.dirty = true; renderTiers();
+  });
+  $('#t-addrow').addEventListener('click', function () {
+    S.draft.push({ id: 't' + Date.now().toString(36), name: 'Yeni sınıf', color: '#5b8def' });
+    S.dirty = true; renderTiers();
+  });
+  $('#t-reset').addEventListener('click', function () { S.draft = clone(DEFAULT_TIERS); S.dirty = true; renderTiers(); });
+  $('#t-cancel').addEventListener('click', function () { S.draft = clone(S.tiers); S.dirty = false; renderTiers(); });
+  $('#t-save').addEventListener('click', async function () {
+    var d = S.draft.map(normTier), msg = '';
+    if (!d.length) msg = 'En az bir sınıf olmalı.';
+    d.forEach(function (t) { if (!t.name.trim()) msg = 'Her sınıfın bir adı olmalı.'; });
+    if (msg) { $('#t-msg').textContent = msg; $('#t-msg').className = 'hint bad'; return; }
+    $('#t-save').disabled = true;
+    try { await S.db.doc('config/tiers').set({ tiers: d, updatedAt: Date.now() }); S.dirty = false; toast('Sınıflar kaydedildi.'); }
+    catch (e) { toast('Kaydedilemedi. ' + errText(e)); $('#t-save').disabled = false; }
+  });
+
+  /* ---------- oyun kataloğu ve depo düzeni ---------- */
+  function slug(text) {
+    var m = { 'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u', 'â': 'a', 'î': 'i', 'û': 'u' };
+    return String(text || '').toLocaleLowerCase('tr').replace(/[çğıöşüâîû]/g, function (c) { return m[c]; }).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30) || 'item';
+  }
+  function clampInt(v, lo, hi) { return Math.min(hi, Math.max(lo, Math.round(num(v)))); }
+  function gameReady() { return S.tiers.length === DepotSim.RULES.conditionCount; }
+  /* Oyunun içe aktardığı "bidwarss-catalog" dosyası. Simülatör de aynı nesneyi kullanır, bu yüzden ikisi aynı depoyu çeker. */
+  function buildGameCatalog() {
+    var list = S.items.filter(isClassified).slice().sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0) || String(a.id).localeCompare(String(b.id)); });
+    var out = [], bad = 0, used = {};
+    list.forEach(function (it) {
+      var dm = dimsOf(it), tw = 0;
+      var rows = classesOf(it).map(function (c) {
+        var w = Math.floor(Math.min(100, Math.max(0, c.chance)) * 1000 + 0.5); tw += w;
+        var mn = clampInt(c.pmin, 1, 10000000);
+        return { chance: w / 1000, priceMin: mn, priceMax: Math.max(mn, clampInt(c.pmax, 1, 10000000)) };
+      });
+      if (tw < 1) { bad++; return; }
+      var base = dm.base > 0 ? dm.base : (rows[2].priceMin + rows[2].priceMax) / 2;
+      var key = slug(it.name) + '-' + String(it.id).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6), n = 2, k0 = key;
+      while (used[key]) key = k0 + '-' + (n++);
+      used[key] = 1;
+      out.push({
+        key: key, title: String(it.name || '').trim().slice(0, 60), shape: '',
+        kg: Math.round(Math.min(5000, dm.kg) * 100) / 100, heightCm: clampInt(dm.h, 0, 2000), widthCm: clampInt(dm.w, 0, 2000), depthCm: clampInt(dm.d, 0, 2000),
+        baseValue: clampInt(base, 1, 100000), collector: Math.round(Math.min(10, dm.coll) * 100) / 100,
+        maxCount: dm.maxc > 0 ? clampInt(dm.maxc, 1, 20) : 0, selectionWeight: 1, classes: rows
+      });
+    });
+    var cut = Math.max(0, out.length - DepotSim.RULES.maxItems);
+    return { catalog: { format: 'bidwarss-catalog', version: 1, tiers: S.tiers.map(function (t) { return t.name; }), items: out.slice(0, DepotSim.RULES.maxItems) },
+      skipped: S.items.length - list.length, bad: bad, cut: cut };
+  }
+  function exportGame() {
+    if (!S.downloads) return toast('Dosya kaydetme bu görünümde kapalı.');
+    if (!gameReady()) return toast('Oyun tam ' + DepotSim.RULES.conditionCount + ' sınıf bekler. Sınıflar sekmesini düzelt.');
+    var g = buildGameCatalog();
+    if (!g.catalog.items.length) return toast('Önce en az bir itemi sınıflandır.');
+    var notes = [];
+    if (g.skipped) notes.push(g.skipped + ' sınıflandırılmamış item dışarıda kaldı');
+    if (g.bad) notes.push(g.bad + ' itemin hiçbir sınıfı çıkmıyor, atlandı');
+    if (g.cut) notes.push('oyun en fazla ' + DepotSim.RULES.maxItems + ' item alır, ' + g.cut + ' item atlandı');
+    saveFile('bidwarss-catalog.json', JSON.stringify(g.catalog, null, 1) + '\n');
+    if (notes.length) toast(notes.join('. ') + '.');
+  }
+  $('#exp-game').addEventListener('click', exportGame);
+  $('#sim-export').addEventListener('click', exportGame);
+
+  function kindColor(k) { return 'hsl(' + ((k * 47) % 360) + ' 58% 50%)'; }
+  function renderSimRules() {
+    var R = DepotSim.RULES;
+    $('#sim-rules').innerHTML = [
+      ['Konteyner', R.minCrates + '–' + R.crateCount + ' / ' + R.crateCount, 'Her turda ' + R.crateCount + ' konteynerin rastgele ' + R.minCrates + ' ile ' + R.crateCount + ' tanesi dolar. Kalanlar kapalı ve boş kalır.'],
+      ['Raf', R.minGroups + '–' + R.totalGroups + ' / ' + R.totalGroups, 'Her turda ' + R.minGroups + ' ile ' + R.totalGroups + ' raf dolar. Bir raf en çok ' + R.stackSize + ' parça alır; 15 parça iki raf, 5 parça yarım raf demektir.'],
+      ['Adet', R.countOptions.join(' · '), 'Bir itemden genelde bu kadar çıkar. Altıda bir 3 ile üst sınır arası tek sayılı bir parti çıkar. Hiçbir item ' + R.maxPerType + ' adedi geçmez.'],
+      ['Üst sınır', 'Boyuta göre', R.sizeCaps.map(function (c) { return c[0] + ' cm+ en çok ' + c[1]; }).join(', ') + '; ağırlıkta ' + R.weightCaps.map(function (c) { return c[0] + ' kg+ en çok ' + c[1]; }).join(', ') + '. Diğerleri ' + R.maxPerType + '.']
+    ].map(function (r) { return '<div class="rule"><em>' + r[0] + '</em><b>' + esc(r[1]) + '</b><span>' + esc(r[2]) + '</span></div>'; }).join('');
+  }
+  function simSource() {
+    if (!gameReady()) return { note: 'Oyun tam ' + DepotSim.RULES.conditionCount + ' sınıf bekler, burada ' + S.tiers.length + ' var. Sınıflar sekmesinden düzelt.' };
+    var g = buildGameCatalog();
+    if (!g.catalog.items.length) return { note: S.itemsLoaded ? 'Depo çekmek için en az bir itemin sınıflandırılmış olması gerekir.' : 'Itemler yükleniyor…' };
+    var notes = [];
+    if (g.skipped) notes.push(g.skipped + ' sınıflandırılmamış item katalogda yok');
+    if (g.cut) notes.push(g.cut + ' item oyunun ' + DepotSim.RULES.maxItems + ' item sınırı yüzünden dışarıda');
+    return { catalog: g.catalog, note: notes.join('. ') };
+  }
+  function lotText(n) { return n + ' adet'; }
+  function renderCaps() {
+    var items = S.items.filter(isClassified).map(function (i) { var dm = dimsOf(i); return { name: i.name, dm: dm, cap: capOf(dm) }; })
+      .sort(function (a, b) { return a.cap - b.cap || String(a.name).localeCompare(String(b.name), 'tr'); });
+    $('#sim-caps').innerHTML = items.length ? items.map(function (x) {
+      var size = Math.max(x.dm.h, x.dm.w, x.dm.d);
+      return '<span class="chip' + (x.cap < DepotSim.RULES.maxPerType ? '' : ' full') + '">' + esc(x.name) + '<b>' + (size ? tr(size, 0) + ' cm' : 'ölçü yok') + (x.dm.kg ? ' · ' + tr(x.dm.kg) + ' kg' : '') + ' → ' + x.cap + '</b></span>';
+    }).join('') : '<span class="hint">Sınıflandırılmış item yok.</span>';
+  }
+  function drawDepot(cat, seed) {
+    var R = DepotSim.RULES, d = DepotSim.generate(cat, seed), items = cat.items, tierNames = S.tiers;
+    var most = d.items.reduce(function (a, b) { return b.dollars > a.dollars ? b : a; }, d.items[0]);
+    var stats = [
+      ['Eşya', d.items.length], ['Konteyner', d.active.length + ' / ' + R.crateCount], ['Raf', d.racks.length + ' / ' + R.totalGroups],
+      ['Toplam değer', fmt(d.total)], ['Parça başı ortalama', fmt(d.total / d.items.length)],
+      ['En pahalı parça', fmt(most.dollars) + ' · ' + esc(items[most.kind].title)]
+    ].map(function (r) { return '<div class="stat"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('');
+    var perCond = tierNames.map(function () { return 0; });
+    d.items.forEach(function (it) { perCond[it.cond]++; });
+    var bar = '<div class="pbar" aria-hidden="true">' + perCond.map(function (n, k) { return '<span style="--tc:' + colorOf(tierNames[k]) + ';flex:' + n + ' 1 0" title="' + esc(tierNames[k].name) + ': ' + n + '"></span>'; }).join('') + '</div>' +
+      '<div class="legend">' + perCond.map(function (n, k) { return '<span style="--tc:' + colorOf(tierNames[k]) + '"><i></i>' + esc(tierNames[k].name) + ' ' + n + '</span>'; }).join('') + '</div>';
+    var crates = '';
+    for (var c = 0; c < R.crateCount; c++) {
+      if (d.active.indexOf(c) < 0) { crates += '<div class="crt off"><h3><span>Konteyner ' + (c + 1) + '</span><span>kapalı</span></h3><span class="hint">Bu turda kullanılmıyor.</span></div>'; continue; }
+      var by = {};
+      d.items.forEach(function (it) { if (it.crate === c) by[it.kind] = (by[it.kind] || 0) + 1; });
+      var kinds = Object.keys(by).map(Number).sort(function (a, b) { return by[b] - by[a] || a - b; });
+      crates += '<div class="crt"><h3><span>Konteyner ' + (c + 1) + '</span><span>' + d.load[c] + ' parça</span></h3><div class="chips">' +
+        kinds.map(function (k) { return '<span class="chip" style="--kc:' + kindColor(k) + '">' + esc(items[k].title) + '<b>×' + by[k] + '</b></span>'; }).join('') + '</div></div>';
+    }
+    var racks = d.racks.map(function (r, i) {
+      return '<span class="chip' + (r.capacity === R.stackSize ? ' full' : '') + '" style="--kc:' + kindColor(r.kind) + '">Raf ' + (i + 1) + ' · ' + esc(items[r.kind].title) + '<b>' + r.capacity + '</b></span>';
+    }).join('');
+    var lots = d.counts.map(function (n, k) { return n > 0 ? '<span class="chip" style="--kc:' + kindColor(k) + '">' + esc(items[k].title) + '<b>' + n + ' / en çok ' + d.limits[k] + '</b></span>' : ''; }).join('');
+    $('#sim-out').innerHTML =
+      '<div class="kv">' + stats + '</div>' + bar +
+      '<h2>Kutular</h2><div class="cgrid">' + crates + '</div>' +
+      '<h2>Raflar</h2><div class="chips">' + racks + '</div>' +
+      '<h2>Bu turda çıkan itemler</h2><div class="chips">' + lots + '</div>' +
+      '<div class="fp">Seed ' + d.seed + ' · ' + esc(DepotSim.summary(d).split(';').pop()) + '</div>';
+  }
+  function manyDepots(cat, seed, n) {
+    var R = DepotSim.RULES, items = [], crates = [], racks = [], totals = [], lotBins = { 5: 0, 10: 0, 15: 0, 20: 0, other: 0 }, lots = 0, seen = cat.items.map(function () { return 0; });
+    for (var i = 0; i < n; i++) {
+      var d = DepotSim.generate(cat, (seed + i) | 0);
+      items.push(d.items.length); crates.push(d.active.length); racks.push(d.racks.length); totals.push(d.total);
+      d.counts.forEach(function (c, k) { if (c > 0) { lots++; lotBins[c === 5 || c === 10 || c === 15 || c === 20 ? c : 'other']++; seen[k] = Math.max(seen[k], c); } });
+    }
+    var avg = function (a) { return a.reduce(function (x, y) { return x + y; }, 0) / a.length; };
+    var range = function (a) { return Math.min.apply(null, a) + '–' + Math.max.apply(null, a); };
+    var stats = [
+      ['Ortalama eşya', tr(avg(items), 1) + ' (' + range(items) + ')'], ['Ortalama konteyner', tr(avg(crates), 1) + ' (' + range(crates) + ')'],
+      ['Ortalama raf', tr(avg(racks), 1) + ' (' + range(racks) + ')'], ['Ortalama değer', fmt(avg(totals)) + ' (' + fmt(Math.min.apply(null, totals)) + '–' + fmt(Math.max.apply(null, totals)) + ')']
+    ].map(function (r) { return '<div class="stat"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('');
+    var hist = ['5', '10', '15', '20', 'other'].map(function (key) {
+      var p = lots ? lotBins[key] / lots * 100 : 0;
+      return '<div class="hrow"><span>' + (key === 'other' ? 'Tek sayılı' : key + ' adet') + '</span><span class="hbar"><span style="width:' + p.toFixed(1) + '%"></span></span><span class="mono">%' + tr(p, 1) + '</span></div>';
+    }).join('');
+    var worst = cat.items.map(function (it, k) { return { t: it.title, cap: DepotSim.maxCount(it), seen: seen[k] }; })
+      .sort(function (a, b) { return a.cap - b.cap; }).slice(0, 6)
+      .map(function (x) { return '<span class="chip">' + esc(x.t) + '<b>sınır ' + x.cap + ' · görülen en çok ' + x.seen + '</b></span>'; }).join('');
+    $('#sim-out').innerHTML = '<h2>' + n + ' tur</h2><div class="kv">' + stats + '</div><h3 style="margin:0">Bir itemden kaç tane çıktı</h3><div class="hist">' + hist + '</div>' +
+      '<h3 style="margin:0">En sıkı sınırlı itemler</h3><div class="chips">' + worst + '</div>';
+  }
+  function renderSim() {
+    renderSimRules(); renderCaps();
+    var src = simSource();
+    $('#sim-note').innerHTML = src.note ? '<div class="note' + (src.catalog ? '' : ' warn') + '">' + esc(src.note.replace(/\.$/, '')) + '.</div>' : '';
+    var seedEl = $('#sim-seed'); if (document.activeElement !== seedEl) seedEl.value = S.simSeed;
+    $('#sim-export').disabled = !src.catalog || !S.downloads; $('#sim-roll').disabled = $('#sim-draw').disabled = $('#sim-many').disabled = !src.catalog;
+    if (!src.catalog) { $('#sim-out').innerHTML = ''; return; }
+    if (S.simMode === 'many') manyDepots(src.catalog, S.simSeed, 400); else drawDepot(src.catalog, S.simSeed);
+  }
+  function readSeed() { var v = parseInt($('#sim-seed').value, 10); return isFinite(v) ? (v | 0) : S.simSeed; }
+  $('#sim-roll').addEventListener('click', function () { S.simSeed = (Math.random() * 4294967296) | 0; S.simMode = 'one'; renderSim(); });
+  $('#sim-draw').addEventListener('click', function () { S.simSeed = readSeed(); S.simMode = 'one'; renderSim(); });
+  $('#sim-many').addEventListener('click', function () { S.simSeed = readSeed(); S.simMode = 'many'; renderSim(); });
+  $('#sim-seed').addEventListener('change', function () { S.simSeed = readSeed(); renderSim(); });
+
+  /* ---------- hepsini çiz ---------- */
+  function renderAll() {
+    renderStats(); renderAddState();
+    if (S.tab === 'sim') renderSim();
+    if (S.view && !S.itemMap[S.view]) return closePage();
+    if (!S.view) renderList();
+  }
+
+  /* ---------- açılış ---------- */
+  function startItems() {
+    S.loadErr = '';
+    clearTimeout(S.loadTimer);
+    S.loadTimer = setTimeout(function () { if (!S.itemsLoaded) { S.loadErr = 'Sunucudan cevap gelmedi.'; S.itemsLoaded = true; renderAll(); } }, 15000);
+    S.db.collection('items').orderBy('createdAt', 'desc').limit(1000).onSnapshot(function (snap) {
+      try {
+        S.items = snap.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); });
+        S.itemMap = {}; S.items.forEach(function (i) { S.itemMap[i.id] = i; });
+        S.loadErr = '';
+      } catch (e) { S.loadErr = 'Veri okunamadı: ' + (e && e.message ? e.message : e); }
+      clearTimeout(S.loadTimer); S.itemsLoaded = true;
+      try { renderAll(); if (!S.dirty) renderTiers(); } catch (e2) { S.loadErr = 'Liste çizilemedi: ' + (e2 && e2.message ? e2.message : e2); S.itemsLoaded = true; try { renderList(); } catch (e3) { } }
+    }, function () { clearTimeout(S.loadTimer); S.loadErr = 'Itemler okunamadı.'; S.itemsLoaded = true; renderAll(); });
+  }
+  $('#grid').addEventListener('click', function (e) { if (e.target.closest('#reload') && S.db) { S.itemsLoaded = false; renderList(); startItems(); } });
+  async function boot() {
+    var tab = lsGet('kd-tab'); if (TABS.indexOf(tab) >= 0) setTab(tab); else setTab('inv');
+    renderAll(); renderTiers(); renderQueue();
+    var caps = await Promise.all([cap('db'), cap('assets'), cap('downloads'), cap('user')]);
+    S.db = caps[0]; S.assets = caps[1]; S.downloads = caps[2];
+    var user = caps[3];
+    try { if (user && user.can) { var w = await user.can('data.write'); S.canWrite = w !== false; } } catch (e) { }
+    if (!S.db) { S.itemsLoaded = true; renderAll(); renderTiers(); renderQueue(); initAI(); return; }
+    S.db.doc('config/tiers').onSnapshot(function (snap) {
+      try {
+        var d = snap.exists ? snap.data() : null;
+        S.tiers = (d && Array.isArray(d.tiers) && d.tiers.length) ? d.tiers.map(normTier) : clone(DEFAULT_TIERS);
+        if (!S.dirty) { S.draft = clone(S.tiers); renderTiers(); }
+        renderAll();
+        if (S.view && S.pd && !S.pdirty) openPage(S.view);
+      } catch (e) { }
+    }, function () { toast('Sınıflar okunamadı.'); });
+    startItems();
+    initAI();
+    renderQueue();
+  }
+  boot();
+})();
+</script>

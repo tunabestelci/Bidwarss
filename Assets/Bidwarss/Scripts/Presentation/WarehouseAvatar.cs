@@ -5,7 +5,9 @@ namespace Bidwarss
     // Procedural placeholder worker. Visual animation follows replicated player motion on every peer.
     public sealed class WarehouseAvatar : MonoBehaviour
     {
-        Transform leftArm,rightArm,leftLeg,rightLeg,torso;
+        Transform leftArm,rightArm,leftElbow,rightElbow,leftLeg,rightLeg,torso;
+        float pulseStart=-10;
+        int lastHeld;
         Vector3 previous;
         float gait,speed;
         WarehousePlayer player;
@@ -26,12 +28,15 @@ namespace Bidwarss
             {
                 Part("Eye",transform,new Vector3(sign*.085f,1.59f,.174f),new Vector3(.042f,.045f,.018f),dark);
                 var arm=Joint(sign<0?"Left arm":"Right arm",transform,new Vector3(sign*.36f,1.28f,0));
-                Part("Sleeve",arm,new Vector3(0,-.15f,0),new Vector3(.17f,.34f,.2f),orange);
-                Part("Glove",arm,new Vector3(0,-.39f,.025f),new Vector3(.18f,.17f,.2f),dark);
+                Part("Sleeve",arm,new Vector3(0,-.12f,0),new Vector3(.17f,.27f,.2f),orange);
+                // The elbow bends the forearm forward when carrying or heaving on a container door.
+                var elbow=Joint(sign<0?"Left elbow":"Right elbow",arm,new Vector3(0,-.26f,0));
+                Part("Forearm",elbow,new Vector3(0,-.07f,0),new Vector3(.16f,.17f,.19f),orange);
+                Part("Glove",elbow,new Vector3(0,-.16f,.012f),new Vector3(.18f,.15f,.2f),dark);
                 var leg=Joint(sign<0?"Left leg":"Right leg",transform,new Vector3(sign*.16f,.8f,0));
                 Part("Trouser",leg,new Vector3(0,-.3f,0),new Vector3(.23f,.6f,.26f),navy);
                 Part("Boot",leg,new Vector3(0,-.7f,.065f),new Vector3(.26f,.2f,.4f),dark);
-                if(sign<0){leftArm=arm;leftLeg=leg;}else{rightArm=arm;rightLeg=leg;}
+                if(sign<0){leftArm=arm;leftElbow=elbow;leftLeg=leg;}else{rightArm=arm;rightElbow=elbow;rightLeg=leg;}
             }
         }
         static Transform Joint(string name,Transform parent,Vector3 pos)
@@ -54,11 +59,34 @@ namespace Bidwarss
             float swing=Mathf.Sin(gait)*Mathf.Min(1,speed/2)*27;
             leftLeg.localRotation=Quaternion.Euler(swing,0,0);rightLeg.localRotation=Quaternion.Euler(-swing,0,0);
             var world=WarehouseWorld.Instance;int kind;
-            bool carrying=world!=null&&world.HeldCount(player.OwnerClientId,out kind)>0;
-            var left=Quaternion.Euler(carrying?-65:-swing,0,carrying?-12:5);
-            var right=Quaternion.Euler(carrying?-65:swing,0,carrying?12:-5);
+            int held=world!=null?world.HeldCount(player.OwnerClientId,out kind):0;
+            bool carrying=held>0;
+            if(held!=lastHeld){pulseStart=Time.time;lastHeld=held;}
+            // Straining against a container door: arms out front, heaving back and forth.
+            float effort=0;
+            if(world!=null)
+                for(int i=0;i<world.Crates.Count;i++)
+                {
+                    var crate=world.Crates[i];
+                    if(crate.active&&!crate.opened&&crate.opener==player.OwnerClientId&&crate.progress>0){effort=crate.progress;break;}
+                }
+            float pulse=Mathf.Sin(Mathf.PI*Mathf.Clamp01((Time.time-pulseStart)/.4f));
+            float shoulderL=-swing,shoulderR=swing,elbowBend=-8;
+            float rollL=5,rollR=-5;
+            if(carrying){shoulderL=shoulderR=-52;elbowBend=-58;rollL=-12;rollR=12;}
+            if(effort>0)
+            {
+                float heave=Mathf.Sin(Time.time*13)*18*effort;
+                shoulderL=shoulderR=-78+heave;elbowBend=-24-heave*.8f;rollL=-6;rollR=6;
+            }
+            // A quick reach whenever something is picked up or put down.
+            shoulderL-=pulse*38;shoulderR-=pulse*38;
+            var left=Quaternion.Euler(shoulderL,0,rollL);
+            var right=Quaternion.Euler(shoulderR,0,rollR);
             float t=1-Mathf.Exp(-12*Time.deltaTime);
             leftArm.localRotation=Quaternion.Slerp(leftArm.localRotation,left,t);rightArm.localRotation=Quaternion.Slerp(rightArm.localRotation,right,t);
+            var bend=Quaternion.Euler(elbowBend,0,0);
+            leftElbow.localRotation=Quaternion.Slerp(leftElbow.localRotation,bend,t);rightElbow.localRotation=Quaternion.Slerp(rightElbow.localRotation,bend,t);
             torso.localPosition=new Vector3(0,1.06f+Mathf.Abs(Mathf.Sin(gait))*.025f*Mathf.Min(1,speed),0);
         }
     }

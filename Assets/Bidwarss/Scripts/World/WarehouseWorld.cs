@@ -42,12 +42,15 @@ namespace Bidwarss
         float nextHoldUpdate;
         // Reused every frame so presentation does not allocate.
         readonly Dictionary<ulong,int> carryIndices=new Dictionary<ulong,int>();
+        readonly Dictionary<int,int> revealOrder=new Dictionary<int,int>();
         StackLayout[] layouts;
         bool[] layoutsReady;
         bool targetsEnsured;
         public GameRules Rules => catalog.CreateRules(crates.Length, totalGroups);
         public double Elapsed => StartedAt.Value <= 0 ? 0 : Math.Max(0, (Completed.Value ? FinishedAt.Value : NetworkManager.ServerTime.Time) - StartedAt.Value);
         public int OpenCount { get { int n=0; for(int i=0;i<Crates.Count;i++) if(Crates[i].opened)n++; return n; } }
+        // Containers that hold something in this depot; the rest of the scene's containers stay shut.
+        public int ActiveCrateCount { get { int n=0; for(int i=0;i<Crates.Count;i++) if(Crates[i].active)n++; return n; } }
 
         void Awake() { Items = new NetworkList<ItemState>(); Crates = new NetworkList<CrateState>(); Stacks = new NetworkList<StackState>(); }
         public override void OnNetworkSpawn()
@@ -91,8 +94,8 @@ namespace Bidwarss
             RulesHash.Value=Engine.RulesHash; TeamNames.Value=""; roster.Clear();
             Items.Clear(); Crates.Clear(); Stacks.Clear();
             holdStarted=new double[crates.Length];
-            for(int i=0;i<crates.Length;i++) Crates.Add(new CrateState { opener=ItemState.Nobody });
-            for(int i=0;i<Engine.StackCount;i++) Stacks.Add(new StackState { kind=Engine.StackKind(i) });
+            for(int i=0;i<crates.Length;i++) Crates.Add(new CrateState { opener=ItemState.Nobody, active=Engine.IsActive(i) });
+            for(int i=0;i<Engine.StackCount;i++) Stacks.Add(new StackState { kind=Engine.StackKind(i), capacity=Engine.StackCapacity(i) });
             foreach(var item in Engine.Items) Items.Add(ToState(item, Vector3.zero));
             foreach(var p in WarehousePlayer.Players.Values) p.ServerResetForRound();
             RunId.Value=Guid.NewGuid().ToString("N");
@@ -108,19 +111,24 @@ namespace Bidwarss
         public string Hint(InteractionTarget target, ulong client)
         {
             if(Completed.Value) return "Depo tamamlandı! Sonuçlara TAB ile bak.";
-            if(target==null) return "Kutuyu aç • Eşyaları türüne göre 10'lu istifle";
+            if(target==null) return "Kutuyu aç • Eşyaları türüne göre istifle";
             int kind; int held=HeldCount(client,out kind);
             if(target.kind==TargetKind.Crate)
-                return Crates[target.id].opened ? "Kutu boşaltıldı" : "E BASILI TUT • Kutuyu aç";
+                return !Crates[target.id].active ? "Bu konteyner bu turda boş • kapalı kalır" : Crates[target.id].opened ? "Kutu boşaltıldı" : "E BASILI TUT • Kutuyu aç";
             if(target.kind==TargetKind.Slot)
             {
                 if(target.id>=Stacks.Count) return "";
                 var stack=Stacks[target.id];
-                return catalog.entries[stack.kind].title+" • "+stack.count+"/10"+(held>0 ? (kind==stack.kind ? " • E: İstifle" : " • Farklı eşya türü") : "");
+                return catalog.entries[stack.kind].title+" • "+stack.count+"/"+stack.capacity+(held>0 ? (kind==stack.kind ? " • E: İstifle" : " • Farklı eşya türü") : "");
             }
             if(target.id<0 || target.id>=Items.Count)return "";
             var item=Items[target.id];
-            return "E: Al • "+catalog.entries[item.kind].title+" • "+GameRules.ConditionNames[(int)item.condition]+" • $"+item.dollars;
+            return "E: Al • "+catalog.entries[item.kind].title+SizeText(catalog.entries[item.kind])+" • "+GameRules.ConditionNames[(int)item.condition]+" • $"+item.dollars;
+        }
+        static string SizeText(ItemCatalog.Entry entry)
+        {
+            int size=Math.Max(entry.heightCm,Math.Max(entry.widthCm,entry.depthCm));
+            return size>0?" ("+size+" cm"+(entry.kg>0?", "+entry.kg.ToString("0.#",System.Globalization.CultureInfo.InvariantCulture)+" kg":"")+")":"";
         }
         void Update()
         {
@@ -130,7 +138,7 @@ namespace Bidwarss
             nextHoldUpdate=Time.unscaledTime+.05f;
             for(int i=0;i<Crates.Count;i++)
             {
-                var state=Crates[i]; if(state.opened)continue;
+                var state=Crates[i]; if(state.opened||!state.active)continue;
                 WarehousePlayer owner=null;
                 if(state.opener!=ItemState.Nobody) WarehousePlayer.Players.TryGetValue(state.opener,out owner);
                 if(!ValidOpener(owner,i))
@@ -149,7 +157,7 @@ namespace Bidwarss
                         if(Engine.Open(i,out error))
                         {
                             state.opened=true; state.openedAt=NetworkManager.ServerTime.Time; state.opener=ItemState.Nobody;
-                            foreach(var item in Engine.Items) if(item.crate==i) Items[item.id]=ToState(item,RevealPosition(item.id,i));
+                            foreach(var item in Engine.Items) if(item.crate==i) Items[item.id]=ToState(item,RevealPosition(item),RevealYaw(item));
                         }
                     }
                 }
@@ -171,10 +179,18 @@ namespace Bidwarss
             if(names.Count>8)names.RemoveRange(8,names.Count-8);
             TeamNames.Value=string.Join(" / ",names.ToArray());
         }
-        Vector3 RevealPosition(int id,int crate)
+        // Pieces spill out in a loose grid. Position and heading are jittered from the seed so no two spills look alike.
+        Vector3 RevealPosition(RoundItem item)
         {
-            int n=id/crates.Length;
-            return itemOrigins[crate].position+itemOrigins[crate].rotation*new Vector3((n%5)*.48f,.23f,(n/5)*.48f);
+            var jitter=new System.Random(unchecked(Engine.Seed*7919+item.id*104729+17));
+            int n=item.crateSlot;
+            float x=(n%5)*.48f+(float)(jitter.NextDouble()-.5)*.14f,z=(n/5)*.48f+(float)(jitter.NextDouble()-.5)*.14f;
+            return itemOrigins[item.crate].position+itemOrigins[item.crate].rotation*new Vector3(x,.23f,z);
+        }
+        static float RevealYaw(RoundItem item)
+        {
+            var spin=new System.Random(unchecked(item.id*15485863+3));
+            return (float)(spin.NextDouble()*360);
         }
         // Two rows of five objects. Rotation follows the pallet, independently of its model scale.
         public Vector3 StackPosition(int stack,int index)
@@ -192,16 +208,16 @@ namespace Bidwarss
         }
         Quaternion StackRotation(int stack,int index)
         {var layout=LayoutFor(stack);return layout!=null?layout.Rotation(index):slots[stack].rotation;}
-        ItemState ToState(RoundItem item,Vector3 position)
+        ItemState ToState(RoundItem item,Vector3 position,float yaw=0)
         {
             bool sealedItem=item.location==ItemLocation.Sealed;
             return new ItemState { id=item.id,kind=sealedItem?-1:item.kind,crate=item.crate,
-                condition=sealedItem?ItemCondition.Terrible:item.condition,dollars=sealedItem?0:item.dollars,
-                location=item.location,holder=item.holder,slot=item.stack,stackIndex=item.stackIndex,position=position };
+                condition=sealedItem?ItemCondition.VeryBad:item.condition,dollars=sealedItem?0:item.dollars,
+                location=item.location,holder=item.holder,slot=item.stack,stackIndex=item.stackIndex,position=position,yaw=yaw };
         }
         void PublishProgress()
         {
-            for(int i=0;i<Stacks.Count;i++) Stacks[i]=new StackState { kind=Engine.StackKind(i),count=Engine.StackCountAt(i) };
+            for(int i=0;i<Stacks.Count;i++) Stacks[i]=new StackState { kind=Engine.StackKind(i),count=Engine.StackCountAt(i),capacity=Engine.StackCapacity(i) };
             PlacedCount.Value=Engine.PlacedCount; SecuredDollars.Value=Engine.SecuredDollars;
             if(Engine.Completed && !Completed.Value)
             {
@@ -278,6 +294,16 @@ namespace Bidwarss
             float byHeight=5.5f/(Mathf.Max(1,label.fontSize)*lines*Mathf.Max(.001f,Mathf.Abs(scale.y)));
             label.characterSize=Mathf.Min(.1f,byWidth,byHeight);
         }
+        // A piece that appears right after its container opened flies out of the doors; late joiners just see it lying there.
+        void StartRevealIfFresh(ItemVisual view,ItemState item)
+        {
+            if(Application.isBatchMode||item.location!=ItemLocation.Loose||item.crate<0||item.crate>=Crates.Count||item.crate>=crates.Length)return;
+            var crate=Crates[item.crate];
+            if(!crate.opened||NetworkManager.ServerTime.Time-crate.openedAt>2.5)return;
+            int order; revealOrder.TryGetValue(item.crate,out order); revealOrder[item.crate]=order+1;
+            float delay=.18f+Mathf.Min(1.1f,order*.055f);
+            view.BeginReveal(crates[item.crate].position+Vector3.up*.9f,delay,.7f+Mathf.Min(.2f,order*.01f),.7f+(order%4)*.12f);
+        }
         void LateUpdate()
         {
             if(!IsSpawned)return;
@@ -293,7 +319,11 @@ namespace Bidwarss
             for(int i=0;i<Crates.Count;i++)
             {
                 bool open=Crates[i].opened;
-                if(open && !knownOpen[i] && !Application.isBatchMode) RevealEffects.Play(crates[i].position+Vector3.up*.7f,dustMaterial);
+                if(open && !knownOpen[i])
+                {
+                    revealOrder[i]=0;
+                    if(!Application.isBatchMode) RevealEffects.Play(crates[i].position+Vector3.up*.7f,dustMaterial);
+                }
                 knownOpen[i]=open;
                 if(lids[i]!=null)lids[i].localRotation=Quaternion.Slerp(lids[i].localRotation,Quaternion.Euler(open?-110:0,0,0),Time.deltaTime*9);
             }
@@ -304,13 +334,13 @@ namespace Bidwarss
                 if(i<Stacks.Count && i<stackLabels.Length && stackLabels[i]!=null)
                 {
                     var s=Stacks[i];
-                    string labelText=catalog.entries[s.kind].title+"\n"+s.count+" / 10";
+                    string labelText=catalog.entries[s.kind].title+"\n"+s.count+" / "+s.capacity;
                     if(stackLabels[i].text!=labelText)
                     {
                         stackLabels[i].text=labelText;
                         FitStackLabel(stackLabels[i]);
                     }
-                    stackLabels[i].color=s.count==10?new Color(.3f,1,.55f):Color.white;
+                    stackLabels[i].color=s.count>=s.capacity&&s.capacity>0?new Color(.3f,1,.55f):Color.white;
                 }
             }
             int carryIndex=0;
@@ -320,7 +350,10 @@ namespace Bidwarss
                 var item=Items[i]; if(item.location==ItemLocation.Sealed)continue;
                 ItemVisual view;
                 if(!views.TryGetValue(item.id,out view))
-                { view=ItemVisual.Create(item,catalog.entries[item.kind],itemMaterial); views.Add(item.id,view); }
+                {
+                    view=ItemVisual.Create(item,catalog.entries[item.kind],itemMaterial); views.Add(item.id,view);
+                    StartRevealIfFresh(view,item);
+                }
                 Vector3 pos=item.position; Quaternion rot=item.location==ItemLocation.Stacked && item.slot>=0 ? StackRotation(item.slot,item.stackIndex) : Quaternion.Euler(0,item.yaw,0);
                 if(item.location==ItemLocation.Held && WarehousePlayer.Players.TryGetValue(item.holder,out var owner))
                 {

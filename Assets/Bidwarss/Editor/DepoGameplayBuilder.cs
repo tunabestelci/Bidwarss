@@ -31,6 +31,12 @@ namespace Bidwarss.Editor
             scene=EditorSceneManager.OpenScene(output,OpenSceneMode.Single);
             var world=scene.GetRootGameObjects().Select(g=>g.GetComponent<WarehouseWorld>()).First(w=>w!=null);
             var session=scene.GetRootGameObjects().Select(g=>g.GetComponent<SessionMenu>()).First(s=>s!=null);
+            // Catalogs from older builds know no sizes, so every type could come twenty at a time. Give them the sized default list.
+            if(world.catalog!=null&&(world.catalog.entries==null||world.catalog.entries.All(e=>e.heightCm+e.widthCm+e.depthCm<=0)))
+            {
+                CatalogImporter.Apply(world.catalog,CatalogImporter.Read(CatalogImporter.DefaultJson));
+                AssetDatabase.SaveAssets();
+            }
             foreach(var root in scene.GetRootGameObjects())
                 if(root!=world.gameObject&&root!=session.gameObject&&root.GetComponent<NetworkManager>()==null&&root.GetComponent<Camera>()==null&&root.GetComponent<Light>()==null)
                     Object.DestroyImmediate(root);
@@ -94,7 +100,7 @@ namespace Bidwarss.Editor
             var buildScenes=EditorBuildSettings.scenes.Where(s=>s.path!=output).ToList();buildScenes.Insert(0,new EditorBuildSettingsScene(output,true));EditorBuildSettings.scenes=buildScenes.ToArray();
             Selection.activeGameObject=world.gameObject;
             Debug.Log("Leaderboard rules hash: "+world.Rules.Fingerprint());
-            Debug.Log("Bidwarss depo hazir: "+output+" | 10 konteyner, "+world.totalGroups+" aktif raf, 4 spawn. Play > Oda Kur.");
+            Debug.Log("Bidwarss depo hazir: "+output+" | 10 konteyner (her turda 6-10 tanesi kullanilir), "+world.totalGroups+" raf (her turda 8-12 tanesi dolar), 4 spawn. Play > Oda Kur.");
         }
         static Transform PrepareDoor(Transform door,Transform container,float hingeZ,int id)
         {

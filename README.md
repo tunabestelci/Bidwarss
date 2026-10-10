@@ -28,42 +28,37 @@ Unity'de paketler derlendikten sonra **Bidwarss > Build Uploaded Depot (Co-op)**
 
 ## Oyun döngüsü
 
-- Varsayılan: 10 kasa, 120 eşya, 12 istif paleti, 1–4 oyuncu.
-- Her eşya türünün **deponun tamamındaki adedi** 10'un katıdır. Tek kasadaki adet 10 olmak zorunda değildir; kasa başına karışık türler çıkar.
-- Dağılım oyun başında seed ile hazırlanır. Açılmamış eşyanın türü, durumu ve fiyatı istemciye gönderilmez. Palet tabelaları türlerin hedef adetlerini gösterir.
-- E'yi 1,35 saniye basılı tut: kasa açılır, kapak hareket eder, toz ve kısa ses çıkar. Bakış uzaklaşırsa veya tuş bırakılırsa ilerleme sıfırlanır. Kasa açarken eller boş olmalı.
+- **Her depo tamamen rastgeledir.** Seed; hangi konteynerlerin kullanıldığını (6–10 kasa), kaç rafın dolduğunu (8–12), hangi eşya türlerinin geldiğini, her türden kaç adet olduğunu, hangi kasada ne bulunduğunu, her parçanın durumunu ve fiyatını belirler. Boş kasa yoktur; kullanılmayan konteyner kapalı kalır ve işaretlenir. 1–4 oyuncu.
+- Bir türden genelde **5, 10, 15 veya 20** adet çıkar, ara sıra 7 ya da 13 gibi tek parti de olur. **Hiçbir türden 20'den fazla çıkmaz** ve büyük/ağır parçalar sınırlanır: en uzun kenar 150 cm ve üstü ya da 60 kg ve üstü → en çok 5; 100 cm / 30 kg → en çok 10; 70 cm / 15 kg → en çok 15. 2 metrelik boy saatinden en fazla 5 tane gelir. Katalogda `maxCount` ile elle de sınırlanabilir.
+- Kasaların yükü çok farklıdır (birinde 3, ötekinde 20+ parça); bir kasaya en çok 24 parça girer. Her tür, adedine göre 10'luk raflara bölünür (23 adet = 10+10+3), raf tabelası `x / kapasite` gösterir.
+- Dağılım oyun başında seed ile hazırlanır. Açılmamış eşyanın türü, durumu ve fiyatı istemciye gönderilmez.
+- E'yi 1,35 saniye basılı tut: eller kapı kollarını tutup gerilir, kapaklar zorlanıp titrer ve aralanır; direnç kırılınca kanatlar ardına kadar savrulur, içindekiler sırayla yay çizerek dönerek fırlar, yere çarparken ezilip toz ve talaş saçar. Bakış uzaklaşırsa veya tuş bırakılırsa ilerleme sıfırlanır. Kasa açarken eller boş olmalı.
 - E ile eşya al. Aynı türden en fazla 10 eşya taşı. Doğru paletin önündeki turkuaz alana bakıp E ile yerleştir. Her palet 10 alır; farklı durumlar aynı tür istifinde bulunabilir.
 - Q ile bir eşya bırak. Son yerleştirilen eşya geri alınabilir; değer ve ilerleme geri düşer.
-- Bütün kasalar açılıp bütün eşyalar doğru paletlere yerleşince sonuç kilitlenir. Kazanç, eşyaların gerçek değerlerinin toplamıdır; tekrar işlemle para çoğaltılamaz.
+- Kullanılan bütün kasalar açılıp bütün eşyalar doğru raflara yerleşince sonuç kilitlenir. Kazanç, eşyaların gerçek değerlerinin toplamıdır; tekrar işlemle para çoğaltılamaz.
 - Sonuç ekranında durum dökümü, ekip, süre, para; host için aynı seed / yeni depo. TAB sonucu açar, ESC menüyü açar. Co-op menüde durmaz.
-- Günlük senaryo UTC tarihini seed yapar (makinenin kültüründen bağımsız, Miladi takvim). Aynı katalog ve kurallar + aynı seed aynı içerikleri üretir.
+- Günlük senaryo UTC tarihini seed yapar (makinenin kültüründen bağımsız, Miladi takvim). Aynı katalog ve kurallar + aynı seed aynı depoyu üretir; her yeni oyunda seed yeni olduğundan kasalar ve içerikleri baştan çekilir.
 - Gamepad: sol çubuk hareket, sağ çubuk bakış, A = E (kasa için basılı tut), B = Q, Start = ESC, Geri = TAB. Menüler fare ister.
 - Ayarlar (ana menü ve mola menüsü): fare/çubuk hassasiyeti, ses, müzik, görüş alanı. Bu bilgisayarda kaydedilir, ağa gitmez.
 - Ses çalışma anında üretilir: kasa açılışı, alma/koyma/bırakma, adımlar ve ortam müziği. Depoda ses dosyası yoktur; yazılı sesler sonra aynı çağrılara bağlanabilir.
 
 ## Durum ve para
 
-Nadirlik kullanılmaz. Her türün `baseDollars` değeri ile durum çarpanı birlikte fiyatı belirler. Örnek temel değeri $100 olan masa:
+Nadirlik ayrı tutulmaz; her eşyanın piyasa değeri (`baseValue`, "Orta" durumun merkezi) ve bir koleksiyon çarpanı vardır. Yedi durum sınıfı ("Çok kötü, Kötü, Orta, İyi, Çok iyi, Destansı, Efsanevi") wiki ile aynıdır. Çıkma şansları varsayılan olarak %30 / 26 / 20 / 13 / 7 / 3,5 / 0,5'tir; fiyat aralıkları değerden ve koleksiyon çarpanından türer, ya da wiki'de eşya başına elle yazılır. Örnek: $100'lık bir eşyada "Orta" yaklaşık $90–110, "Efsanevi" çok daha yukarıdadır; koleksiyon çarpanı yüksek eşyada üst sınıflar hızla pahalanır.
 
-| Durum | Fiyat | Varsayılan ağırlık |
-|---|---:|---:|
-| Rezalet | $15–30 | 8 |
-| Çok kötü | $35–50 | 14 |
-| Kötü | $60–85 | 20 |
-| Orta | $100–150 | 27 |
-| İyi | $170–220 | 18 |
-| Çok iyi | $250–300 | 10 |
-| Efsane | $500–600 | 3 |
+Aralık içinde tam sayı fiyat çekilir. Süre kaydedilir, kazançtan düşülmez. Aynı para puanındaki sıralama eşitliğinde kısa süre öne gelir.
 
-Bunlar ilk denge değerleridir; katalogdan değiştirilebilir. Aralık içinde tam sayı yüzde çekilir, temel değerle çarpılıp tam dolara yuvarlanır (aşağı). Süre kaydedilir, kazançtan düşülmez. Aynı para puanındaki sıralama eşitliğinde kısa süre öne gelir.
+## Kendi eşyalarını eklemek (wiki ile eşleşme)
 
-## Kendi eşyalarını eklemek
+Eşyalar **Kasa Defteri** wiki'sinde (`Site/kasa-defteri.html`, yayınlanmış sayfanın kaynağı) yazılır; oyun aynı formatı okur. Wiki'de Itemler sekmesinde **Oyun kataloğu** düğmesi `bidwarss-catalog` JSON dosyasını indirir (en çok 40 eşya, tam 7 durum sınıfı). Unity'de **Bidwarss > Katalog > Wiki dosyasından içe aktar (JSON)...** ile seç; `ItemCatalog` asset'i güncellenir. Dosya geçersizse nedeni Türkçe bildirilir ve hiçbir şey değişmez. **Varsayılan kataloğu yeniden uygula** `Assets/Bidwarss/Data/ItemCatalog.json` içindeki 14 eşyayı geri yükler.
 
-`GeneratedV2/ItemCatalog.asset` içindeki her kayıt: kalıcı ve benzersiz `key`, görünen `title`, `baseDollars`, seçim ağırlığı `selectionWeight`, en fazla onlu grup sayısı `maxGroups`, renk ve isteğe bağlı `visualPrefab`.
+Her kayıt: kalıcı `key`, `title`, `shape`, `kg`, `heightCm/widthCm/depthCm`, `baseValue`, `collector`, `selectionWeight`, `maxCount` (0 = ölçüden otomatik) ve isteğe bağlı 7 sınıf satırı (`chance`, `priceMin`, `priceMax`). Katalog ya da kural değişince kural hash'i değişir (sürüm 3); yeni hash'i skor servisine izin listesine ekle.
 
-Prefab sadece görseldir; NetworkObject/oynanış scripti ekleme. Çocuk collider'ları devre dışı bırakılır, görünüm taşıma hücresine otomatik ölçeklenir; gerçek etkileşim collider'ını oyun sağlar. Beş geçici ayna/masa/sandalye/radyo/lamba silueti model bağlanana kadar kullanılır. Durum ayrı renk mührü ile gösterilir; kendi modelinin malzemesi boyanmaz.
+Wiki'nin **Depo düzeni** sekmesi oyunun depo çekimini birebir çalıştırır (aynı seed, aynı sonuç): bir seed için kasaları, raf adetlerini ve toplam değeri gösterir, 400 turluk deneme ile büyük eşyaların sınırını aşmadığını kanıtlar. Eşleşme `node Tests/depot_sim_check.js` ve C# testindeki ortak "golden" dosyayla (`Tests/golden_depots.txt`) her push'ta denetlenir.
 
-Warehouse State üzerindeki `totalGroups` toplam eşya sayısını 10'lu gruplarla belirler. Şimdiki sahne 12 palet içerir; artırırken `slots` ve `stackLabels` dizilerini ve fiziksel paletleri de büyüt. Kod sınırları 300 eşya, 20 kasa, 16 türdür. Katalog kapasitesi hedef grupları karşılamazsa oyun açıklayıcı hatayla başlamaz. Özel sahnede eşya çıkarma alanlarını ve bağlantı kopması kurtarma alanını boş tut.
+Prefab sadece görseldir; NetworkObject/oynanış scripti ekleme. Çocuk collider'ları devre dışı bırakılır, görünüm taşıma hücresine otomatik ölçeklenir; gerçek etkileşim collider'ını oyun sağlar. Prefabı olmayan eşyalar `shape` alanındaki geçici siluetle (sandalye, masa, saat, vazo, kılıç, radyo...) gösterilir. Durum ayrı renk mührü ile gösterilir; kendi modelinin malzemesi boyanmaz.
+
+Warehouse State üzerindeki `totalGroups` en çok kaç rafın dolacağını, `minGroups` en azını; `crateCount` / `minCrates` kullanılacak kasa aralığını belirler. Şimdiki sahne 12 raf ve 10 konteyner içerir; artırırken `slots`, `stackLabels` dizilerini ve fiziksel rafları da büyüt. Kod sınırları 300 eşya, 20 kasa, 40 tür. Katalog kapasitesi (türlerin sınırları toplamı) hedef rafları karşılamazsa oyun açıklayıcı hatayla başlamaz. Özel sahnede eşya çıkarma alanlarını ve bağlantı kopması kurtarma alanını boş tut.
 
 ## Co-op
 
@@ -106,9 +101,9 @@ Yuklenen DepoLevel_Unity.zip artik Assets/DepoLevel altinda entegredir. Asagidak
 - **Create Playable Copy Of Current Scene**: once temel Warehouse sahnesi uretilmis olmali. Kendi mekan sahneni ac ve bu menuyu kullan; kaynak sahneyi koruyarak yeni Bidwarss_Playable sahnesine kasa, palet, kamera, oyuncu ve ag sistemlerini ekler. Prototip duvar/zeminini eklemez. **Mekanin geometrisini analiz edip otomatik yerlesim yapmaz.** Ornek konumlardaki kasa/paletleri, kapak menteselerini, esya cikis noktalarini ve tabelalari mekanina gore yerlestir.
 - **Add Mesh Colliders To Selection**: Hierarchy'de sabit mekan kokunu sec. Mevcut collider'lari koruyarak uygun mesh parcalarinda non-convex MeshCollider olusturur. Tek buyuk kutuyla kapi bosluklarini kapatmaz. Animator/Animation/Rigidbody/NetworkObject altindaki hareketli parcalar atlanir. Cam, dekor ve mevcut collider kalitesi ayrica kontrol edilmeli; undo desteklenir, sahneyi kaydet.
 
-Session Menu > Spawn Points alanina 4 bos Transform atayarak oyuncu giris noktalarini belirle. Warehouse State > Recovery Origin ayrilan oyuncularin esyalarinin birakilacagi bos alanin baslangicidir; grid saga 23.4 metre, geriye en cok 3.22 metre uzanabilir (300 esya sinirinda). Varsayilan 120 esyada 0.92 metre derinlik gerekir. Bu alan model duvarlarina gelmemeli. Q birakma zemini raycast ile bulur. Palet, crate origin, kamera ve spawn yerlesimi icin gercek model ile Play Mode kontrolu gerekir.
+Session Menu > Spawn Points alanina 4 bos Transform atayarak oyuncu giris noktalarini belirle. Warehouse State > Recovery Origin ayrilan oyuncularin esyalarinin birakilacagi bos alanin baslangicidir; grid saga 23.4 metre, geriye en cok 3.22 metre uzanabilir (300 esya sinirinda). Bir turda en cok 120 esya (12 raf) cikar; bu 0.92 metre derinlik gerektirir. Bu alan model duvarlarina gelmemeli. Q birakma zemini raycast ile bulur. Palet, crate origin, kamera ve spawn yerlesimi icin gercek model ile Play Mode kontrolu gerekir.
 
-Bu eklemede C# sozdizimi kontrolu ve mevcut domain testleri gecti; Unity derlemesi ve goruntu/animasyon dogrulamasi bu ortamda yapilmadi.
+Rastgele depo, boyut siniri ve wiki esleşmesi C# domain testleri ve JS simulatoru ile dogrulandi; Unity derlemesi ve goruntu/animasyon dogrulamasi bu ortamda yapilmadi.
 
 ## Yuklenen deponun oynanabilir surumu
 

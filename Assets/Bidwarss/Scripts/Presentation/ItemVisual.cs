@@ -7,18 +7,25 @@ namespace Bidwarss
     {
         Collider hitbox;
         Renderer[] renderers;
+        Transform art;
         ItemLocation previous;
         bool positioned;
+        // Pop-out animation. Only the artwork moves; the root and its hitbox stay at the real position,
+        // so every peer (and the server) agrees on what can be picked up.
+        bool revealing,hidden;
+        float revealStart,revealDelay,revealDuration,revealHeight,revealSpin,landedAt=-1;
+        Vector3 revealFrom;
+        // Same colours as the wear classes on the "Kasa Defteri" wiki, worst to best.
         public static readonly Color[] ConditionColors={
-            new Color(.44f,.35f,.3f),new Color(.63f,.38f,.27f),new Color(.85f,.57f,.22f),
-            new Color(.85f,.87f,.9f),new Color(.32f,.85f,.5f),new Color(.3f,.65f,1),new Color(1,.76f,.18f)};
+            new Color(.49f,.52f,.56f),new Color(.63f,.50f,.35f),new Color(.31f,.56f,.72f),
+            new Color(.25f,.63f,.48f),new Color(.54f,.39f,.82f),new Color(.84f,.28f,.56f),new Color(.88f,.65f,.15f)};
         public static ItemVisual Create(ItemState state,ItemCatalog.Entry entry,Material material)
         {
             var go=new GameObject(entry.title+" #"+state.id);
             var visual=go.AddComponent<ItemVisual>();
             var box=go.AddComponent<BoxCollider>();box.size=new Vector3(.44f,.42f,.34f);visual.hitbox=box;
             var target=go.AddComponent<InteractionTarget>();target.kind=TargetKind.Item;target.id=state.id;
-            var art=new GameObject("Visual").transform;art.SetParent(go.transform,false);
+            var art=new GameObject("Visual").transform;art.SetParent(go.transform,false);visual.art=art;
             if(entry.visualPrefab!=null)
             {
                 var custom=Instantiate(entry.visualPrefab,art);
@@ -65,6 +72,19 @@ namespace Bidwarss
                     Part(root,"Base",new Vector3(0,-.16f,0),new Vector3(.25f,.045f,.25f),dark,mat);
                     Part(root,"Stem",new Vector3(0,-.04f,0),new Vector3(.035f,.24f,.035f),dark,mat);
                     Part(root,"Shade",new Vector3(0,.12f,0),new Vector3(.3f,.15f,.25f),color,mat);break;
+                case ItemCatalog.SampleShape.Clock:
+                    Part(root,"Case",new Vector3(0,-.02f,0),new Vector3(.17f,.40f,.12f),color,mat);
+                    Part(root,"Face",new Vector3(0,.1f,-.065f),new Vector3(.12f,.12f,.015f),new Color(.95f,.93f,.85f),mat);
+                    Part(root,"Hood",new Vector3(0,.2f,0),new Vector3(.21f,.04f,.15f),dark,mat);
+                    Part(root,"Pendulum",new Vector3(0,-.1f,-.065f),new Vector3(.04f,.18f,.012f),new Color(.9f,.75f,.3f),mat);break;
+                case ItemCatalog.SampleShape.Vase:
+                    Part(root,"Belly",new Vector3(0,-.04f,0),new Vector3(.2f,.24f,.2f),color,mat);
+                    Part(root,"Neck",new Vector3(0,.13f,0),new Vector3(.09f,.14f,.09f),color,mat);
+                    Part(root,"Rim",new Vector3(0,.21f,0),new Vector3(.14f,.03f,.14f),dark,mat);break;
+                case ItemCatalog.SampleShape.Sword:
+                    Part(root,"Blade",new Vector3(0,.04f,0),new Vector3(.035f,.38f,.012f),new Color(.82f,.86f,.9f),mat);
+                    Part(root,"Guard",new Vector3(0,-.15f,0),new Vector3(.14f,.025f,.03f),color,mat);
+                    Part(root,"Grip",new Vector3(0,-.2f,0),new Vector3(.03f,.08f,.03f),dark,mat);break;
                 default:Part(root,"Sample",Vector3.zero,new Vector3(.34f,.32f,.28f),color,mat);break;
             }
         }
@@ -83,8 +103,63 @@ namespace Bidwarss
             hitbox.enabled=!held;
             bool snap=!positioned||previous!=state.location||!held;
             transform.SetPositionAndRotation(snap?position:Vector3.Lerp(transform.position,position,1-Mathf.Exp(-22*Time.deltaTime)),rotation);
-            if(positioned&&previous!=state.location)RevealEffects.ItemSound(previous,state.location,position);
+            if(positioned&&previous!=state.location)
+            {
+                RevealEffects.ItemSound(previous,state.location,position);
+                // Picking a revealed item up early ends its pop-out immediately.
+                if(state.location!=ItemLocation.Loose)EndReveal();
+            }
             positioned=true;previous=state.location;
+            Animate();
+        }
+        // The item leaves the opened container in an arc, spinning and growing, and lands with a small squash.
+        public void BeginReveal(Vector3 from,float delay,float duration,float height)
+        {
+            if(Application.isBatchMode||art==null)return;
+            revealing=true;revealFrom=from;revealStart=Time.time;revealDelay=delay;revealDuration=Mathf.Max(.2f,duration);
+            revealHeight=height;revealSpin=Random.Range(-220f,220f);landedAt=-1;
+        }
+        void EndReveal()
+        {
+            revealing=false;landedAt=-1;
+            if(art==null)return;
+            art.localPosition=Vector3.zero;art.localRotation=Quaternion.identity;art.localScale=Vector3.one;
+            if(hidden){art.gameObject.SetActive(true);hidden=false;}
+        }
+        void Animate()
+        {
+            if(art==null)return;
+            if(revealing)
+            {
+                float t=(Time.time-revealStart-revealDelay)/revealDuration;
+                if(t<0)
+                {
+                    if(!hidden){art.gameObject.SetActive(false);hidden=true;}
+                    return;
+                }
+                if(hidden){art.gameObject.SetActive(true);hidden=false;RevealEffects.Pop(revealFrom);}
+                if(t<1)
+                {
+                    float travel=1-(1-t)*(1-t);
+                    Vector3 world=Vector3.Lerp(revealFrom,transform.position,travel)+Vector3.up*(Mathf.Sin(t*Mathf.PI)*revealHeight);
+                    art.position=world;
+                    art.rotation=transform.rotation*Quaternion.Euler((1-t)*140,(1-t)*revealSpin,(1-t)*60);
+                    float grow=t<.7f?Mathf.Lerp(.3f,1.12f,t/.7f):Mathf.Lerp(1.12f,1f,(t-.7f)/.3f);
+                    art.localScale=Vector3.one*grow;
+                    return;
+                }
+                revealing=false;landedAt=Time.time;
+                art.localPosition=Vector3.zero;art.localRotation=Quaternion.identity;
+                RevealEffects.Land(transform.position);
+            }
+            if(landedAt>=0)
+            {
+                float u=Time.time-landedAt;
+                if(u>.28f){landedAt=-1;art.localScale=Vector3.one;return;}
+                // Damped squash: flatten on impact, rebound a little, settle.
+                float squash=.2f*Mathf.Exp(-u*13f)*Mathf.Cos(u*28f);
+                art.localScale=new Vector3(1+squash*.6f,1-squash,1+squash*.6f);
+            }
         }
     }
 }

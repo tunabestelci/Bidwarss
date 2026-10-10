@@ -1,6 +1,6 @@
 # V2 doğrulama
 
-Otomatik (CI'da her push'ta): C# domain testleri (2.000 seed, tam tur, devir, fiyat tabanı, kural sınırları, oyuncu adı temizleme); Python skor servisi testleri (imza ve ham gövde, nonce tekrarı, süre aşımı, idempotent tekrar, veri sınırları, tarih biçimi, yasak kelime, sayfalama, hız sınırı 429, gerçek HTTP); depo denetimi (.meta/GUID, parantez dengesi, bileşen dosya adları, Domain bağımsızlığı); PowerShell sözdizimi; Docker imajı derlemesi.
+Otomatik (CI'da her push'ta): C# domain testleri (2.000 seed, rastgele depo değişmezleri, boyuta göre tür sınırı, adet dağılımı, katalog dosyası, tam tur, devir, kural sınırları, oyuncu adı temizleme, golden depo dosyası); JS depo simülatörünün (wiki) C# ile aynı depoyu üretmesi (`Tests/depot_sim_check.js`); Python skor servisi testleri (imza ve ham gövde, nonce tekrarı, süre aşımı, idempotent tekrar, veri sınırları, tarih biçimi, yasak kelime, sayfalama, hız sınırı 429, gerçek HTTP); depo denetimi (.meta/GUID, parantez dengesi, bileşen dosya adları, Domain bağımsızlığı); PowerShell sözdizimi; Docker imajı derlemesi.
 
 Unity Editor bu ortamda yok; Unity assembly derlemesi, shader importu, scene üretimi, Windows PowerShell kurulumları ve aşağıdaki Play Mode testleri henüz yürütülmedi. Domain testleri Unity/co-op testlerinin yerine geçmez.
 
@@ -10,7 +10,7 @@ Unity Editor bu ortamda yok; Unity assembly derlemesi, shader importu, scene ür
 4. Aynı eşya için eşzamanlı E; tek sahip. En çok 10 aynı tür; farklı tür ve dolu palet reddedilir. Doğru paletin önündeki turkuaz işaretten yerleştirilir.
 5. İstifin son eşyasını geri almak sayaç/para değerini azaltır. Q dolu zemine bırakamaz. Eşya taşırken bağlantı kopması eşyaları giriş alanına bırakır.
 6. Ortasında katıl; açılmış kasalar ve taşınan/yerleşmiş eşyalar eşit görünür. Host ayrılınca menüye dönüş.
-7. 120 eşyanın tamamını yerleştir; sonuç bir kez oluşur, 7 durum tutarı toplam kazanca eşittir. Aynı seed yeniden başlatmada içerik aynı; yeni seed yeni içerik. Süre parayı azaltmaz.
+7. Turdaki bütün eşyaları yerleştir; sonuç bir kez oluşur, 7 durum tutarı toplam kazanca eşittir. Aynı seed yeniden başlatmada içerik aynı; yeni seed yeni kasa sayısı, kasa yükleri, tür ve adetler. Üst üste 10 yeni depoda kullanılan kasa sayısı, raf sayısı ve türler farklı çıkar; hiçbir türden 20'den, boy saati gibi büyük parçadan 5'ten fazla yoktur. Kullanılmayan konteyner kapalı ve işaretli kalır. Süre parayı azaltmaz.
 8. Sonuçtan yeni depoya geç; eski modeller, kapaklar, ilerleme, eldeki eşya temizlenir. Yerel kayıt oyunu kapatıp açınca kalır.
 9. Dünya servisi olmadan açık durum mesajı. HTTPS servis + dedicated server ile sonuç kaydı; oyuncu-host oda dünya kaydı göndermez. Servis kesilip açıldığında aynı tamamlanmış sonucun tekrarı çoğalmaz.
 10. Kendi görsel prefab'ını bağla, taşıma hücresine oturmasını ve collider'ların etkileşimi engellememesini kontrol et.
@@ -28,3 +28,11 @@ Unity Editor bu ortamda yok; Unity assembly derlemesi, shader importu, scene ür
 Bes geometri testi gecti: dugum kimlikleri/sayilari, 4 spawn ve merkez koridor, konteyner basina en cok 30 esya cikisi, 12 raf/120 hucre ve yaklasma alanlari, 300 esyalik kurtarma gridi. AABB verisi kullanir; Unity fizik motorunun yerine gecmez.
 
 Unity'de Build Uploaded Depot (Co-op) sonrasi: giris zemini ve kapilardan yurume; her konteyneri E ile acma; iki kanadin koridora cikmamasi; acilmis kapiya gec katilim; 120 esyayi gercek raf hucrelerine yerlestirme; yeni run kapilari kapatirken oyuncularin konteyner icinde kalmamasi; dogru sahnenin client build'inde acilmasi; shaderlar/dokular/TMP'siz yazi ve FPS olcumu.
+
+## Animasyon ve el kontrolü (Unity'de gözle)
+
+19. Kasa açma: E basılıyken eller kapı koluna gider, kapaklar ilerlemeyle birlikte aralanıp titrer; açılınca kanatlar savrulup hafifçe geri sekerek durur, eller geniş açılır.
+20. Eşya çıkışı: parçalar kasadan yay çizip dönerek çıkar, yere ezilerek oturur; toz ve talaş görünür, parçalar üst üste binmez; büyük parçalar küçüklerden yavaş ve ağır çıkar.
+21. Eller: parmaklar ve başparmak ayrı hareket eder; yürürken sallanma hıza uyar; eşya taşırken eller yükün altında kıvrılır; alma uzanıp kavrama, koyma ileri itme olarak okunur. Başka oyuncunun avatarında dirsekler ve taşıma/yükleme kol hareketi görünür.
+22. Depo tazeliği: her yeni oyunda kasa sayısı, içerikleri ve rafların sırası değişir; HUD'da `x / kapasite` raf sayıları ve açılacak kasa sayısı doğrudur.
+23. Katalog: wiki'den indirilen JSON menüden içe aktarılır, Console'da eşya ve kural hash'i yazılır; bozuk dosya Türkçe hata verir ve katalog değişmez.

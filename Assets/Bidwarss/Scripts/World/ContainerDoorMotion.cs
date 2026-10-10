@@ -6,16 +6,30 @@ namespace Bidwarss
         public WarehouseWorld world;
         public int crateIndex;
         public Transform left,right;
-        public float duration=.9f;
+        public float duration=1.05f;
         void LateUpdate()
         {
             if(world==null||!world.IsSpawned||crateIndex>=world.Crates.Count)return;
             var state=world.Crates[crateIndex];
-            float t=state.opened?Mathf.Clamp01((float)(world.NetworkManager.ServerTime.Time-state.openedAt)/duration):0;
-            t=t*t*(3-2*t);
+            float angle,shake=0;
+            if(state.opened)
+            {
+                float t=Mathf.Clamp01((float)(world.NetworkManager.ServerTime.Time-state.openedAt)/duration);
+                // Ease out with a small overshoot: the doors are flung wide, bounce back and settle.
+                float u=t-1;
+                angle=180*(1+2.2f*u*u*u+1.2f*u*u);
+                shake=(1-t)*Mathf.Sin(Time.time*38)*1.4f;
+            }
+            else
+            {
+                // While somebody holds E the doors strain against the latch: a growing crack and a rattle.
+                float effort=state.opener!=ItemState.Nobody?state.progress:0;
+                angle=effort*effort*10;
+                shake=Mathf.Sin(Time.time*57)*effort*1.8f+Mathf.Sin(Time.time*23)*effort*effort*1.2f;
+            }
             // Both leaves sweep into the container, keeping the central corridor clear.
-            left.localRotation=Quaternion.Euler(0,180+180*t,0);
-            right.localRotation=Quaternion.Euler(0,180-180*t,0);
+            left.localRotation=Quaternion.Euler(0,180+angle+shake,0);
+            right.localRotation=Quaternion.Euler(0,180-angle-shake,0);
         }
     }
 }

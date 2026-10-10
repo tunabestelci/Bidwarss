@@ -48,14 +48,9 @@ namespace Bidwarss.Editor
             var crate = MakeMaterial("Crates", new Color(.85f, .46f, .15f));
             var playerMat = MakeMaterial("Players", new Color(.8f, .26f, .35f));
             var catalog = ScriptableObject.CreateInstance<ItemCatalog>();
-            catalog.entries = new[]
-            {
-                Entry("mirror", "Ayna", 100, ItemCatalog.SampleShape.Mirror, new Color(.3f,.75f,.8f)),
-                Entry("table", "Masa", 100, ItemCatalog.SampleShape.Table, new Color(.76f,.5f,.24f)),
-                Entry("chair", "Sandalye", 60, ItemCatalog.SampleShape.Chair, new Color(.85f,.4f,.28f)),
-                Entry("radio", "Radyo", 120, ItemCatalog.SampleShape.Radio, new Color(.4f,.65f,.44f)),
-                Entry("lamp", "Lamba", 80, ItemCatalog.SampleShape.Lamp, new Color(.95f,.78f,.3f))
-            };
+            // The item list lives in Assets/Bidwarss/Data/ItemCatalog.json, the same file format the wiki exports.
+            catalog.entries = new ItemCatalog.Entry[0];
+            CatalogImporter.Apply(catalog, CatalogImporter.Read(CatalogImporter.DefaultJson));
             AssetDatabase.CreateAsset(catalog, Root + "/ItemCatalog.asset");
             if (GraphicsSettings.defaultRenderPipeline == null)
             {
@@ -181,9 +176,6 @@ namespace Bidwarss.Editor
             }
             Debug.Log("Leaderboard rules hash: " + world.Rules.Fingerprint());
         }
-
-        static ItemCatalog.Entry Entry(string key,string title,int dollars,ItemCatalog.SampleShape shape,Color color) =>
-            new ItemCatalog.Entry {key=key,title=title,baseDollars=dollars,sampleShape=shape,color=color};
 
         static Material MakeMaterial(string name, Color color)
         {
