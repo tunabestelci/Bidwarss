@@ -67,7 +67,7 @@ namespace Bidwarss
                 music.clip=RevealEffects.AmbientClip();music.loop=true;music.spatialBlend=0;music.playOnAwake=false;music.Play();
             }
             if(!string.IsNullOrEmpty(lastStatus)){Status=lastStatus;lastStatus=null;}
-            network.NetworkConfig.ConnectionApproval=true;network.NetworkConfig.ProtocolVersion=3;
+            network.NetworkConfig.ConnectionApproval=true;network.NetworkConfig.ProtocolVersion=4;
             network.ConnectionApprovalCallback=Approve;
             network.OnClientDisconnectCallback+=Disconnected;network.OnClientStopped+=Stopped;network.OnTransportFailure+=TransportFailed;
         }

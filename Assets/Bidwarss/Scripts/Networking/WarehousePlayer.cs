@@ -12,6 +12,8 @@ namespace Bidwarss
     public sealed class WarehousePlayer : NetworkBehaviour
     {
         public Transform body;
+        public WarehouseGripRig Grip { get; private set; }
+        public float LookDistance { get; private set; }
         public static WarehousePlayer Local { get; private set; }
         public static readonly Dictionary<ulong,WarehousePlayer> Players=new Dictionary<ulong,WarehousePlayer>();
         public readonly NetworkVariable<FixedString64Bytes> PlayerName=new NetworkVariable<FixedString64Bytes>();
@@ -33,6 +35,7 @@ namespace Bidwarss
         public override void OnNetworkSpawn()
         {
             Players[OwnerClientId]=this; motor=GetComponent<CharacterController>(); motor.enabled=IsServer;
+            Grip=gameObject.AddComponent<WarehouseGripRig>();Grip.Initialize(this);
             if(IsServer)PlayerName.Value=SessionMenu.Instance!=null?SessionMenu.Instance.NameFor(OwnerClientId):"Oyuncu";
             // Replace the original capsule visually; the CharacterController remains the sole body collider.
             Material avatarMaterial=null;
@@ -50,6 +53,7 @@ namespace Bidwarss
             var go=new GameObject("Local camera",typeof(Camera),typeof(AudioListener));
             go.tag="MainCamera";
             go.transform.SetParent(transform,false); go.transform.localPosition=Vector3.up*1.55f;
+            Grip.UseCamera(go.transform);
             go.AddComponent<WarehouseHands>().Initialize(this,avatarMaterial);
             eye=go.GetComponent<Camera>(); eye.nearClipPlane=.05f; eye.fieldOfView=78; LockCursor(true);
         }
@@ -57,6 +61,7 @@ namespace Bidwarss
         {
             if(Players.TryGetValue(OwnerClientId,out var p) && p==this)Players.Remove(OwnerClientId);
             if(Local==this){Local=null;LockCursor(false);}
+            if(Grip!=null){Destroy(Grip.CarryAnchor.gameObject);Destroy(Grip);Grip=null;}
         }
         public void ServerResetForRound()
         {
@@ -115,9 +120,9 @@ namespace Bidwarss
             }
             eye.fieldOfView=GameSettings.Fov;
             eye.transform.rotation=Quaternion.Euler(pitch,yaw,0);
-            Looked=null;
+            Looked=null;LookDistance=float.PositiveInfinity;
             if(active && Physics.Raycast(eye.transform.position,eye.transform.forward,out var hit,3.5f,~0,QueryTriggerInteraction.Ignore))
-                Looked=hit.collider.GetComponentInParent<InteractionTarget>();
+            { Looked=hit.collider.GetComponentInParent<InteractionTarget>();LookDistance=hit.distance; }
             CurrentHint=world!=null?world.Hint(Looked,OwnerClientId):"";
             int openTarget=active && interactHeld && Looked!=null && Looked.kind==TargetKind.Crate?Looked.id:-1;
             if(Time.unscaledTime>=nextSend)
@@ -155,18 +160,21 @@ namespace Bidwarss
         [Rpc(SendTo.Owner,InvokePermission=RpcInvokePermission.Server)]
         void FeedbackRpc(string text){Toast=text;ToastUntil=Time.unscaledTime+2.5f;}
         public bool ServerLooksAt(TargetKind kind,int id)
+        {return ServerLookHit(kind,id,3.5f,out _);}
+        public bool ServerLookHit(TargetKind kind,int id,float reach,out RaycastHit contact)
         {
-            if(!IsServer)return false;
+            contact=default;if(!IsServer)return false;
             Vector3 origin=transform.position+Vector3.up*1.55f;
             Vector3 direction=Quaternion.Euler(serverPitch,transform.eulerAngles.y,0)*Vector3.forward;
             Physics.SyncTransforms();
-            var hits=Physics.RaycastAll(origin,direction,3.5f,~0,QueryTriggerInteraction.Ignore);
+            var hits=Physics.RaycastAll(origin,direction,reach,~0,QueryTriggerInteraction.Ignore);
             System.Array.Sort(hits,(a,b)=>a.distance.CompareTo(b.distance));
             foreach(var hit in hits)
             {
                 if(hit.transform.IsChildOf(transform))continue;
                 var target=hit.collider.GetComponentInParent<InteractionTarget>();
-                return target!=null && target.kind==kind && target.id==id;
+                if(target!=null && target.kind==kind && target.id==id){contact=hit;return true;}
+                return false;
             }
             return false;
         }
@@ -175,6 +183,7 @@ namespace Bidwarss
         {
             if(!IsSpawned||!IsServer)return;
             Vector2 input=InputFresh?serverMove:Vector2.zero;
+            if(WarehouseWorld.Instance!=null && WarehouseWorld.Instance.TryOpening(OwnerClientId,out _,out _))input=Vector2.zero;
             Vector3 direction=transform.right*input.x+transform.forward*input.y;
             verticalSpeed=motor.isGrounded?-2:Mathf.Max(verticalSpeed-20*Time.fixedDeltaTime,-30);
             motor.Move((direction*4.5f+Vector3.up*verticalSpeed)*Time.fixedDeltaTime);

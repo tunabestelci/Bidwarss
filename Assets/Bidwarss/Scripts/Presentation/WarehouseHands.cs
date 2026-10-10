@@ -1,13 +1,16 @@
+using Bidwarss.Domain;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace Bidwarss
 {
-    // First-person gloved hands, built from cubes. Everything is procedural:
+    // First-person hands. The skinned Bruno hands are used when their prefab exists (Resources/Bruno/BrunoFirstPersonHands),
+    // otherwise gloved hands built from cubes. Everything that moves them is procedural:
     //  - idle breathing and a walking bob that follows the real movement speed,
     //  - a carry pose with the fingers hooked under the load,
     //  - a reach-and-grab lunge when taking a piece, a push when stacking or dropping,
     //  - hands that grip the container doors and strain against them while the crate opens, then fling them wide.
+    [DefaultExecutionOrder(100)]
     public sealed class WarehouseHands : MonoBehaviour
     {
         enum Gesture { None, Grab, Release, Fling }
@@ -21,6 +24,8 @@ namespace Bidwarss
             public Vector3 position;
             public Quaternion rotation=Quaternion.identity;
             public float curl;
+            public bool bruno;
+            public SkinnedMeshRenderer[] skins;
         }
 
         Hand left,right;
@@ -37,7 +42,39 @@ namespace Bidwarss
         public void Initialize(WarehousePlayer owner,Material shared)
         {
             player=owner;material=shared;lastPlayerPosition=owner.transform.position;
-            left=BuildHand(-1);right=BuildHand(1);
+            if(!TryBuildBrunoHands())
+            {left=BuildHand(-1);right=BuildHand(1);}
+        }
+
+        bool TryBuildBrunoHands()
+        {
+            var prefab=Resources.Load<GameObject>("Bruno/BrunoFirstPersonHands");
+            if(prefab==null)return false;
+            var instance=Instantiate(prefab,transform,false);
+            Transform l=null,r=null;
+            foreach(var t in instance.GetComponentsInChildren<Transform>())
+            {if(t.name=="HandLeft")l=t;else if(t.name=="HandRight")r=t;}
+            if(l==null||r==null){Destroy(instance);return false;}
+            var skins=instance.GetComponentsInChildren<SkinnedMeshRenderer>();
+            left=BrunoHand(-1,l,skins);right=BrunoHand(1,r,skins);
+            return true;
+        }
+
+        // The wrist pivot sits where the Bruno hand mesh was authored, so every pose moves the pivot and the mesh follows.
+        static Hand BrunoHand(int side,Transform mesh,SkinnedMeshRenderer[] all)
+        {
+            var pivot=new GameObject(mesh.name+" wrist").transform;
+            pivot.SetParent(mesh.parent,false);pivot.localPosition=mesh.localPosition;
+            mesh.SetParent(pivot,false);mesh.localPosition=Vector3.zero;
+            var list=new System.Collections.Generic.List<SkinnedMeshRenderer>();
+            foreach(var skin in all)
+            {
+                bool isRight=skin.name.Contains("Right");
+                if(isRight==(side>0))list.Add(skin);
+            }
+            var hand=new Hand{side=side,root=pivot,bruno=true,skins=list.ToArray()};
+            hand.position=pivot.localPosition;
+            return hand;
         }
 
         Hand BuildHand(int side)
@@ -140,7 +177,7 @@ namespace Bidwarss
             if(crateIndex>=0)openingCrate=crateIndex;
             else if(openingCrate>=0)
             {
-                if(world!=null&&openingCrate<world.Crates.Count&&world.Crates[openingCrate].opened)StartGesture(Gesture.Fling);
+                if(world!=null&&openingCrate<world.Crates.Count&&world.Crates[openingCrate].opened&&world.Crates[openingCrate].openingMode==OpeningMode.Hands)StartGesture(Gesture.Fling);
                 openingCrate=-1;
             }
 
@@ -156,40 +193,62 @@ namespace Bidwarss
         void ApplyPose(Hand hand,bool carry,bool opening,float progress,float stride,float u,float dt)
         {
             float s=hand.side;
+            var rig=player.Grip;
+            bool working=rig!=null&&rig.Tool!=OpeningTool.None;
+            bool rigCarry=!working&&carry&&rig!=null&&rig.CarryAnchor!=null;
             // Base pose.
-            Vector3 position=new Vector3(s*.27f,-.33f,.46f);
-            Quaternion rotation=Quaternion.Euler(8,-s*6,-s*4);
-            float curl=.22f;
+            Vector3 position=hand.bruno?new Vector3(s*.25f,-.28f,.44f):new Vector3(s*.27f,-.33f,.46f);
+            Quaternion rotation=hand.bruno?Quaternion.identity:Quaternion.Euler(8,-s*6,-s*4);
+            float curl=hand.bruno?0:.22f;
             if(carry)
             {
                 // Cradling a load: hands closer together and rolled inward, fingers hooked underneath.
                 position=new Vector3(s*.21f,-.25f,.5f);
-                rotation=Quaternion.Euler(-16,-s*14,-s*20);
-                curl=.62f;
+                rotation=hand.bruno?Quaternion.identity:Quaternion.Euler(-16,-s*14,-s*20);
+                curl=hand.bruno?.25f:.62f;
             }
-            if(opening)
+            if(opening&&!working)
             {
                 // Hands on the door handles, leaning back with the effort.
                 float strain=Mathf.Sin(Time.time*13+s)*.025f*progress;
                 position=new Vector3(s*.2f,-.1f+strain*.4f,.56f-strain-progress*.04f);
-                rotation=Quaternion.Euler(-24,-s*8,-s*8);
-                curl=.92f;
+                rotation=Quaternion.Slerp(Quaternion.identity,Quaternion.Euler(-24,-s*8,-s*8),hand.bruno?.6f:1);
+                curl=hand.bruno?.9f:.92f;
             }
-            // Idle breathing and the walking bob.
-            float breathe=Mathf.Sin(Time.time*1.7f+s)*.004f;
-            position.y+=breathe+Mathf.Abs(Mathf.Sin(gait))*.016f*stride;
-            position.x+=Mathf.Cos(gait)*.012f*stride*s;
-            position.z+=Mathf.Sin(gait*2)*.006f*stride;
-            rotation*=Quaternion.Euler(Mathf.Sin(gait*2)*3*stride,0,Mathf.Cos(gait)*4*stride*s);
+            bool rigDriven=working||rigCarry;
+            if(working)
+            {
+                // The tool follows the same wrist pose as the hand, so the handle cannot float away: no smoothing here.
+                Vector3 world=s<0?rig.LeftToolWrist:rig.RightToolWrist;
+                position=transform.InverseTransformPoint(world);
+                rotation=Quaternion.Inverse(transform.rotation)*rig.ToolRotation;
+                curl=hand.bruno?(s>0?1f:.35f):(s>0?.95f:.5f);
+            }
+            else if(rigCarry)
+            {
+                position=transform.InverseTransformPoint(rig.SupportWrist(s<0));
+                rotation=Quaternion.Inverse(transform.rotation)*rig.CarryAnchor.rotation;
+            }
+            if(!rigDriven)
+            {
+                // Idle breathing and the walking bob.
+                float breathe=Mathf.Sin(Time.time*1.7f+s)*.004f;
+                position.y+=breathe+Mathf.Abs(Mathf.Sin(gait))*.016f*stride;
+                position.x+=Mathf.Cos(gait)*.012f*stride*s;
+                position.z+=Mathf.Sin(gait*2)*.006f*stride;
+                rotation*=Quaternion.Euler(Mathf.Sin(gait*2)*3*stride,0,Mathf.Cos(gait)*4*stride*s);
+            }
 
-            // Smooth toward the pose, then add the gesture on top so it stays snappy.
-            float blend=1-Mathf.Exp(-14*dt);
+            // Smooth toward the pose (rig poses snap), then add the gesture on top so it stays snappy.
+            float blend=rigDriven?1:1-Mathf.Exp(-14*dt);
             hand.position=Vector3.Lerp(hand.position,position,blend);
             hand.rotation=Quaternion.Slerp(hand.rotation,rotation,blend);
             hand.curl=Mathf.Lerp(hand.curl,curl,1-Mathf.Exp(-18*dt));
 
             Vector3 offset=Vector3.zero;Quaternion extra=Quaternion.identity;float shownCurl=hand.curl;
-            if(gesture==Gesture.Grab)
+            float openCurl=hand.bruno?0:.06f;
+            if(working){}
+            else if(gesture==Gesture.Grab)
             {
                 // Lunge forward with open fingers, snap shut at the top of the reach, pull back.
                 float reach=Mathf.Sin(Mathf.PI*Mathf.Pow(u,.75f));
@@ -197,7 +256,7 @@ namespace Bidwarss
                 extra=Quaternion.Euler(-14*reach,0,0);
                 float closing=Mathf.Clamp01((u-.42f)/.14f);
                 float weight=u<.8f?1:1-(u-.8f)/.2f;
-                shownCurl=Mathf.Lerp(hand.curl,Mathf.Lerp(.06f,1f,closing),weight);
+                shownCurl=Mathf.Lerp(hand.curl,Mathf.Lerp(openCurl,hand.bruno?.6f:1f,closing),weight);
                 if(!gripped&&u>=.5f){gripped=true;RevealEffects.Grip(transform.position+transform.forward*.5f);}
             }
             else if(gesture==Gesture.Release)
@@ -222,6 +281,17 @@ namespace Bidwarss
 
         static void SetCurl(Hand hand,float curl)
         {
+            if(hand.bruno)
+            {
+                // The skinned hands close with their "...Grip" blend shape.
+                foreach(var skin in hand.skins)
+                {
+                    if(skin==null||skin.sharedMesh==null)continue;
+                    for(int i=0;i<skin.sharedMesh.blendShapeCount;i++)
+                        if(skin.sharedMesh.GetBlendShapeName(i).EndsWith("Grip"))skin.SetBlendShapeWeight(i,Mathf.Clamp01(curl)*100f);
+                }
+                return;
+            }
             for(int i=0;i<4;i++)
             {
                 // Outer fingers close a little later than the index finger, like a real fist.

@@ -24,6 +24,8 @@ namespace Bidwarss
             {
                 // While somebody holds E the doors strain against the latch: a growing crack and a rattle.
                 float effort=state.opener!=ItemState.Nobody?state.progress:0;
+                // Cutting tape or prying a lid only makes the container tremble; bare hands crack the doors open.
+                if(state.openingMode!=Bidwarss.Domain.OpeningMode.Hands)effort*=.3f;
                 angle=effort*effort*10;
                 shake=Mathf.Sin(Time.time*57)*effort*1.8f+Mathf.Sin(Time.time*23)*effort*effort*1.2f;
             }

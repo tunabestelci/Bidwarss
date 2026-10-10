@@ -48,9 +48,11 @@ namespace Bidwarss
         public ulong opener;
         public float progress;
         public double openedAt;
+        public Vector3 contactPoint, contactNormal;
+        public OpeningMode openingMode;
         public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
-        { s.SerializeValue(ref opened); s.SerializeValue(ref active); s.SerializeValue(ref opener); s.SerializeValue(ref progress); s.SerializeValue(ref openedAt); }
-        public bool Equals(CrateState o) => opened == o.opened && active == o.active && opener == o.opener && progress.Equals(o.progress) && openedAt.Equals(o.openedAt);
+        { s.SerializeValue(ref opened); s.SerializeValue(ref active); s.SerializeValue(ref opener); s.SerializeValue(ref progress); s.SerializeValue(ref openedAt); s.SerializeValue(ref contactPoint); s.SerializeValue(ref contactNormal); s.SerializeValue(ref openingMode); }
+        public bool Equals(CrateState o) => opened == o.opened && active == o.active && opener == o.opener && progress.Equals(o.progress) && openedAt.Equals(o.openedAt) && contactPoint.Equals(o.contactPoint) && contactNormal.Equals(o.contactNormal) && openingMode == o.openingMode;
     }
 
     public struct StackState : INetworkSerializable, IEquatable<StackState>

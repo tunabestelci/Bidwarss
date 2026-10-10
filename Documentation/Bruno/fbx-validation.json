@@ -1,0 +1,39 @@
+{
+  "fbx_roundtrip": "passed",
+  "mesh_count": 2,
+  "bones": 18,
+  "blendshapes": [
+    "Basis",
+    "Blink_L",
+    "Blink_R",
+    "Basis",
+    "Grip_L",
+    "Grip_R"
+  ],
+  "actions": [
+    "Bruno_Rig|Bruno_Rig|BoxCut",
+    "Bruno_Rig|Bruno_Rig|CarryIdle",
+    "Bruno_Rig|Bruno_Rig|CarryWalk",
+    "Bruno_Rig|Bruno_Rig|Greet",
+    "Bruno_Rig|Bruno_Rig|Idle",
+    "Bruno_Rig|Bruno_Rig|Pry",
+    "Bruno_Rig|Bruno_Rig|Walk",
+    "Key.001|Bruno_Rig|BoxCut",
+    "Key.001|Bruno_Rig|CarryIdle",
+    "Key.001|Bruno_Rig|CarryWalk",
+    "Key.001|Bruno_Rig|Greet",
+    "Key.001|Bruno_Rig|Idle",
+    "Key.001|Bruno_Rig|Pry",
+    "Key.001|Bruno_Rig|Walk",
+    "Key|Bruno_Rig|BoxCut",
+    "Key|Bruno_Rig|CarryIdle",
+    "Key|Bruno_Rig|CarryWalk",
+    "Key|Bruno_Rig|Greet",
+    "Key|Bruno_Rig|Idle",
+    "Key|Bruno_Rig|Pry",
+    "Key|Bruno_Rig|Walk"
+  ],
+  "weights_normalized": true,
+  "finite_animation_samples": true,
+  "unity_editor_tested": false
+}

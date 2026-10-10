@@ -32,7 +32,7 @@ Unity'de paketler derlendikten sonra **Bidwarss > Build Uploaded Depot (Co-op)**
 - Bir türden genelde **5, 10, 15 veya 20** adet çıkar, ara sıra 7 ya da 13 gibi tek parti de olur. **Hiçbir türden 20'den fazla çıkmaz** ve büyük/ağır parçalar sınırlanır: en uzun kenar 150 cm ve üstü ya da 60 kg ve üstü → en çok 5; 100 cm / 30 kg → en çok 10; 70 cm / 15 kg → en çok 15. 2 metrelik boy saatinden en fazla 5 tane gelir. Katalogda `maxCount` ile elle de sınırlanabilir.
 - Kasaların yükü çok farklıdır (birinde 3, ötekinde 20+ parça); bir kasaya en çok 24 parça girer. Her tür, adedine göre 10'luk raflara bölünür (23 adet = 10+10+3), raf tabelası `x / kapasite` gösterir.
 - Dağılım oyun başında seed ile hazırlanır. Açılmamış eşyanın türü, durumu ve fiyatı istemciye gönderilmez.
-- E'yi 1,35 saniye basılı tut: eller kapı kollarını tutup gerilir, kapaklar zorlanıp titrer ve aralanır; direnç kırılınca kanatlar ardına kadar savrulur, içindekiler sırayla yay çizerek dönerek fırlar, yere çarparken ezilip toz ve talaş saçar. Bakış uzaklaşırsa veya tuş bırakılırsa ilerleme sıfırlanır. Kasa açarken eller boş olmalı.
+- E'yi basılı tut ve kasaya yaklaş: kasa üzerindeki `CrateOpeningProfile` açılış yolunu belirler (yoksa bantlı tahta kasa varsayılır: önce maket bıçağı, sonra çivi sökücü, en az 3,2 sn). `Hands` modunda (konteyner kapısı) eller kapı kollarını tutup gerilir, kapaklar zorlanıp titrer ve aralanır, direnç kırılınca kanatlar ardına kadar savrulur. Her modda içindekiler sırayla yay çizerek dönerek fırlar, yere çarparken ezilip toz ve talaş saçar. Bakış uzaklaşırsa veya tuş bırakılırsa ilerleme sıfırlanır. Kasa açarken eller boş olmalı.
 - E ile eşya al. Aynı türden en fazla 10 eşya taşı. Doğru paletin önündeki turkuaz alana bakıp E ile yerleştir. Her palet 10 alır; farklı durumlar aynı tür istifinde bulunabilir.
 - Q ile bir eşya bırak. Son yerleştirilen eşya geri alınabilir; değer ve ilerleme geri düşer.
 - Kullanılan bütün kasalar açılıp bütün eşyalar doğru raflara yerleşince sonuç kilitlenir. Kazanç, eşyaların gerçek değerlerinin toplamıdır; tekrar işlemle para çoğaltılamaz.
@@ -123,3 +123,9 @@ Depo verisi `.json.gz` olarak kayipsiz saklanir; editor kurucu okurken acar. Dah
 Ag protokolu kapilarin zaman bilgisini tasimak icin 3 oldu; tum oyuncular yeni build kullanmali.
 
 Dogrulama: `python -m pip install numpy` ardindan `python -m unittest discover -s Tests -p test_depot_layout.py -v`. Bu kontroller veri geometrisi uzerindedir; Unity Editor derlemesi, goruntu, fizik ve iki bilgisayarli oyun testi burada yapilmamistir.
+
+## Bruno karakteri
+
+Özgün 3D karakter, yedi animasyon, göz kırpma, cel shader ve birinci şahıs elleri eklendi. **Bidwarss > Bruno > Open Character Preview** ile inceleyin. [Kurulum, bağımsız 3D önizleme ve doğrulama notları](Documentation/Bruno/README.md). Unity Editor/Play Mode testi bu ortamda yapılmadı.
+
+Bruno v2: ele bağlı eşya taşıma, kol IK, maket bıçağı/çivi sökücü ve sunucu kontrollü açma aşamaları. Host ve istemciler protokol 4 sürümünü birlikte kurmalıdır.

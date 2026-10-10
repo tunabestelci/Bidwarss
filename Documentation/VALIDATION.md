@@ -31,7 +31,7 @@ Unity'de Build Uploaded Depot (Co-op) sonrasi: giris zemini ve kapilardan yurume
 
 ## Animasyon ve el kontrolü (Unity'de gözle)
 
-19. Kasa açma: E basılıyken eller kapı koluna gider, kapaklar ilerlemeyle birlikte aralanıp titrer; açılınca kanatlar savrulup hafifçe geri sekerek durur, eller geniş açılır.
+19. Kasa açma: Bruno dalı birleştirildi. Bantlı/tahta kasada maket bıçağı ve çivi sökücü, eller o aletlerin sapında kalır; `Hands` modundaki konteynerde E basılıyken eller kapı koluna gider, kapaklar ilerlemeyle birlikte aralanıp titrer; açılınca kanatlar savrulup hafifçe geri sekerek durur, eller geniş açılır.
 20. Eşya çıkışı: parçalar kasadan yay çizip dönerek çıkar, yere ezilerek oturur; toz ve talaş görünür, parçalar üst üste binmez; büyük parçalar küçüklerden yavaş ve ağır çıkar.
 21. Eller: parmaklar ve başparmak ayrı hareket eder; yürürken sallanma hıza uyar; eşya taşırken eller yükün altında kıvrılır; alma uzanıp kavrama, koyma ileri itme olarak okunur. Başka oyuncunun avatarında dirsekler ve taşıma/yükleme kol hareketi görünür.
 22. Depo tazeliği: her yeni oyunda kasa sayısı, içerikleri ve rafların sırası değişir; HUD'da `x / kapasite` raf sayıları ve açılacak kasa sayısı doğrudur.

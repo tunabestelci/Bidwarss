@@ -1,0 +1,15 @@
+{
+  "clips": [
+    "Idle",
+    "Walk",
+    "CarryIdle",
+    "CarryWalk",
+    "Greet",
+    "BoxCut",
+    "Pry"
+  ],
+  "toolsLoaded": true,
+  "visibleCarriedItems": 10,
+  "finite": true,
+  "errors": []
+}

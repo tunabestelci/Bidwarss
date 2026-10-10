@@ -19,6 +19,34 @@ public static class DomainTests
         catch (Exception ex) { failures.Add(name + ": " + ex.Message); }
     }
 
+    static void CheckCarryAndTools()
+    {
+        for(int count=1;count<=10;count++)
+        {
+            var layout=new CarryLayout(count);
+            Check(layout.Width<=.61f && layout.Depth<=.45f,"Carry bundle must fit in arms");
+            for(int i=0;i<count;i++)
+            {
+                layout.Position(i,out float x,out float y,out float z);
+                Check(y>=0 && y+.42f*layout.Scale<=.45f,"Items must stay above the palms and below eye line");
+                for(int j=0;j<i;j++)
+                {
+                    layout.Position(j,out float bx,out float by,out float bz);
+                    bool separated=Math.Abs(x-bx)>=.44f*layout.Scale || Math.Abs(y-by)>=.42f*layout.Scale || Math.Abs(z-bz)>=.40f*layout.Scale;
+                    Check(separated,"Carried item bounds overlap");
+                }
+            }
+        }
+        Check(OpeningSequence.Sample(OpeningMode.CutThenPry,.449f,out _) == OpeningTool.BoxCutter,"Cut must precede pry");
+        Check(OpeningSequence.Sample(OpeningMode.CutThenPry,.45f,out var start) == OpeningTool.PryBar && start==0,"Pry starts at stage boundary");
+        foreach(OpeningMode mode in Enum.GetValues(typeof(OpeningMode)))
+            for(int p=-10;p<=110;p++)
+            {
+                OpeningSequence.Sample(mode,p/100f,out var phase);
+                Check(phase>=0 && phase<=1,"Tool phase must be normalized");
+            }
+        Check(OpeningSequence.Sample(OpeningMode.Hands,.7f,out _)==OpeningTool.None,"Door mode must not show a blade");
+    }
     static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
@@ -73,6 +101,7 @@ public static class DomainTests
 
     public static int Main()
     {
+        Run("carry layout and opening tools", CheckCarryAndTools);
         Run("catalog file", CatalogFile);
         Run("depot invariants", DepotInvariants);
         Run("size limits", SizeLimits);
