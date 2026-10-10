@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$ProjectPath)
+param([Parameter(Mandatory=$true)][string]$ProjectPath,[switch]$QuarantineUnknown)
 $ErrorActionPreference = 'Stop'
 $project = (Resolve-Path $ProjectPath).Path
 $manifestPath = Join-Path $project 'Packages/manifest.json'
@@ -86,6 +86,23 @@ if (Test-Path $duplicateScripts) {
             Move-Item ($file.FullName + '.meta') ($destination + '.meta')
         }
         Write-Host "Cift script yedeklendi: $relative"
+    }
+}
+# Scripts that sit in Assets/Bidwarss but are not part of this repository (left over from another copy of the game)
+# usually reference types that no longer exist and break the whole compile. With -QuarantineUnknown they are moved,
+# together with their .meta files, into the backup folder. Nothing is deleted.
+if ($QuarantineUnknown) {
+    $known = @{}
+    foreach ($entry in $installedFiles) { $known[$entry] = $true }
+    $root = Join-Path $project 'Assets/Bidwarss'
+    foreach ($file in Get-ChildItem $root -Filter '*.cs' -File -Recurse -Force) {
+        $relative = 'Assets/Bidwarss/' + ($file.FullName.Substring($root.Length).TrimStart([char]'\', [char]'/') -replace '\\', '/')
+        if ($known.ContainsKey($relative)) { continue }
+        $destination = Join-Path $backup ('Unknown/' + $relative)
+        New-Item (Split-Path $destination -Parent) -ItemType Directory -Force | Out-Null
+        Move-Item $file.FullName $destination
+        if (Test-Path ($file.FullName + '.meta')) { Move-Item ($file.FullName + '.meta') ($destination + '.meta') }
+        Write-Host "Repoda olmayan script yedege tasindi: $relative"
     }
 }
 Write-Host "Kuruldu. Yedek: $backup"

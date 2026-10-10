@@ -63,7 +63,7 @@ namespace Bidwarss
                     if(name.EndsWith("Grip_R",StringComparison.Ordinal)){fingerMesh=r;gripR=i;}
                 }
             }
-            random = new System.Random(GetInstanceID());
+            random = new System.Random(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this));
             time = (float)random.NextDouble() * 6;
             nextBlink = time + 1 + (float)random.NextDouble() * 3;
             if (animator != null)
