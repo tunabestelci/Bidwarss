@@ -287,7 +287,7 @@ fieldset.modes legend { padding-inline: 6px; font-size: 11px; letter-spacing: 0.
   <section id="p-sim" role="tabpanel" aria-labelledby="t-sim" class="sec" hidden>
     <div class="sec">
       <h2>Depo düzeni</h2>
-      <p class="lead">Oyun her turda depoyu baştan, tamamen rastgele kurar: hangi konteynerlerin kullanılacağı, kaç rafın dolacağı, hangi itemlerin çıkacağı, her birinden kaç tane olacağı ve hangi konteynerde duracağı seed’den çekilir. Burası aynı kuralları defterdeki itemlerle çalıştırır. Kataloğu oyuna aktarırsan aynı seed oyunda da aynı depoyu verir.</p>
+      <p class="lead">Oyun her turda depoyu baştan, tamamen rastgele kurar: hangi konteynerlerin kullanılacağı, kaç rafın dolacağı, hangi itemlerin çıkacağı, her birinden kaç tane olacağı ve hangi konteynerde duracağı seed’den çekilir. Burası aynı kuralları defterdeki itemlerle çalıştırır. Oyunda her itemin kasaları depoya sabit ayrılır (en çok adedine yetecek kadar); bir turda bunların yalnız bir kısmı dolar, kalanı boş kalıp gizlenir. Kurallar, 5 / 10 / 15 / 20 partileri ve item başına üst sınır iki tarafta aynıdır.</p>
     </div>
     <div class="rules" id="sim-rules"></div>
     <div id="sim-note"></div>
@@ -693,7 +693,7 @@ var DepotSim = (function () {
       var dm = dimsOf(i);
       return {
         id: i.id, name: i.name, note: i.note || '', analysis: i.analysis || '', classified: isClassified(i), assetId: i.assetId || '',
-        kg: dm.kg, heightCm: dm.h, widthCm: dm.w, depthCm: dm.d, baseValue: dm.base, collectorScore: dm.coll, maxPerRound: capOf(dm),
+        kg: dm.kg, heightCm: dm.h, widthCm: dm.w, depthCm: dm.d, baseValue: dm.base, collectorScore: dm.coll, maxPerRound: capOf(dm), maxCount: dm.maxc,
         classes: isClassified(i) ? classesOf(i).map(function (c, k) { return { tier: S.tiers[k].name, chancePercent: c.chance, priceMin: c.pmin, priceMax: c.pmax }; }) : []
       };
     });
