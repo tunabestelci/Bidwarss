@@ -28,7 +28,8 @@ namespace Bidwarss
         public float ToastUntil { get; private set; }
         public bool ResultsVisible { get; private set; }
         bool seenCompleted;
-        string currentRun;
+        FixedString64Bytes currentRun;
+        float stepTimer,lastPacket;
         public override void OnNetworkSpawn()
         {
             Players[OwnerClientId]=this; motor=GetComponent<CharacterController>(); motor.enabled=IsServer;
@@ -76,42 +77,66 @@ namespace Bidwarss
         {
             if(!IsSpawned || !IsOwner || eye==null)return;
             var world=WarehouseWorld.Instance;
-            if(world!=null && currentRun!=world.RunId.Value.ToString())
-            {currentRun=world.RunId.Value.ToString();seenCompleted=false;ResultsVisible=false;LockCursor(true);}
+            if(world!=null && !currentRun.Equals(world.RunId.Value))
+            {currentRun=world.RunId.Value;seenCompleted=false;ResultsVisible=false;LockCursor(true);}
             if(world!=null && world.Completed.Value && !seenCompleted)
             {seenCompleted=true;ResultsVisible=true;LockCursor(false);RevealEffects.Celebrate();}
-            var keyboard=Keyboard.current;var mouse=Mouse.current;
-            if(keyboard==null || mouse==null)return;
-            if(keyboard.escapeKey.wasPressedThisFrame) {ResultsVisible=false;LockCursor(Cursor.lockState!=CursorLockMode.Locked);}
-            if(keyboard.tabKey.wasPressedThisFrame && world!=null && world.Completed.Value)
+            var keyboard=Keyboard.current;var mouse=Mouse.current;var pad=Gamepad.current;
+            if(keyboard==null && mouse==null && pad==null)return;
+            // Keyboard/mouse and gamepad are interchangeable: A = E, B = Q, Start = ESC, Back = TAB.
+            bool escape=(keyboard!=null&&keyboard.escapeKey.wasPressedThisFrame)||(pad!=null&&pad.startButton.wasPressedThisFrame);
+            bool tab=(keyboard!=null&&keyboard.tabKey.wasPressedThisFrame)||(pad!=null&&pad.selectButton.wasPressedThisFrame);
+            bool interactHeld=(keyboard!=null&&keyboard.eKey.isPressed)||(pad!=null&&pad.buttonSouth.isPressed);
+            bool interactDown=(keyboard!=null&&keyboard.eKey.wasPressedThisFrame)||(pad!=null&&pad.buttonSouth.wasPressedThisFrame);
+            bool dropDown=(keyboard!=null&&keyboard.qKey.wasPressedThisFrame)||(pad!=null&&pad.buttonEast.wasPressedThisFrame);
+            if(escape) {ResultsVisible=false;LockCursor(Cursor.lockState!=CursorLockMode.Locked);}
+            if(tab && world!=null && world.Completed.Value)
             {ResultsVisible=!ResultsVisible;LockCursor(!ResultsVisible);}
             bool active=Cursor.lockState==CursorLockMode.Locked && Application.isFocused;
             Vector2 movement=Vector2.zero;
             if(active)
             {
-                var delta=mouse.delta.ReadValue();yaw=Mathf.Repeat(yaw+delta.x*.12f,360);pitch=Mathf.Clamp(pitch-delta.y*.12f,-80,80);
-                movement=new Vector2((keyboard.dKey.isPressed?1:0)-(keyboard.aKey.isPressed?1:0),(keyboard.wKey.isPressed?1:0)-(keyboard.sKey.isPressed?1:0));
+                Vector2 look=Vector2.zero;
+                float sensitivity=GameSettings.MouseSensitivity;
+                if(mouse!=null)look+=mouse.delta.ReadValue()*sensitivity;
+                // Right stick: about 140 degrees per second at the default sensitivity.
+                if(pad!=null)look+=pad.rightStick.ReadValue()*(sensitivity*1170f*Time.unscaledDeltaTime);
+                yaw=Mathf.Repeat(yaw+look.x,360);pitch=Mathf.Clamp(pitch-look.y,-80,80);
+                if(keyboard!=null)
+                    movement=new Vector2((keyboard.dKey.isPressed?1:0)-(keyboard.aKey.isPressed?1:0),(keyboard.wKey.isPressed?1:0)-(keyboard.sKey.isPressed?1:0));
+                if(pad!=null)movement+=pad.leftStick.ReadValue();
+                movement=Vector2.ClampMagnitude(movement,1);
+                if(movement.sqrMagnitude>.04f)
+                {
+                    stepTimer-=Time.deltaTime;
+                    if(stepTimer<=0){RevealEffects.Step(transform.position);stepTimer=.46f;}
+                }
+                else stepTimer=0;
             }
+            eye.fieldOfView=GameSettings.Fov;
             eye.transform.rotation=Quaternion.Euler(pitch,yaw,0);
             Looked=null;
             if(active && Physics.Raycast(eye.transform.position,eye.transform.forward,out var hit,3.5f,~0,QueryTriggerInteraction.Ignore))
                 Looked=hit.collider.GetComponentInParent<InteractionTarget>();
             CurrentHint=world!=null?world.Hint(Looked,OwnerClientId):"";
-            int openTarget=active && keyboard.eKey.isPressed && Looked!=null && Looked.kind==TargetKind.Crate?Looked.id:-1;
+            int openTarget=active && interactHeld && Looked!=null && Looked.kind==TargetKind.Crate?Looked.id:-1;
             if(Time.unscaledTime>=nextSend)
             {
                 nextSend=Time.unscaledTime+.05f;
                 InputRpc(Vector2.ClampMagnitude(movement,1),yaw,pitch,openTarget);
             }
-            if(active && keyboard.eKey.wasPressedThisFrame && Looked!=null && Looked.kind!=TargetKind.Crate)
+            if(active && interactDown && Looked!=null && Looked.kind!=TargetKind.Crate)
                 InteractRpc(Looked.kind,Looked.id,yaw,pitch);
-            if(active && keyboard.qKey.wasPressedThisFrame)DropRpc();
+            if(active && dropDown)DropRpc();
         }
         void LateUpdate(){if(IsOwner && eye!=null)eye.transform.rotation=Quaternion.Euler(pitch,yaw,0);}
         [Rpc(SendTo.Server,InvokePermission=RpcInvokePermission.Owner,Delivery=RpcDelivery.Unreliable)]
         void InputRpc(Vector2 movement,float heading,float vertical,int crate)
         {
             if(!Finite(movement.x)||!Finite(movement.y)||!Finite(heading)||!Finite(vertical))return;
+            // Honest clients send 20 packets per second; ignore floods from modified clients.
+            if(Time.unscaledTime-lastPacket<.02f)return;
+            lastPacket=Time.unscaledTime;
             serverMove=Vector2.ClampMagnitude(movement,1);transform.rotation=Quaternion.Euler(0,Mathf.Repeat(heading,360),0);
             serverPitch=Mathf.Clamp(vertical,-80,80);wantedCrate=crate;lastInput=Time.unscaledTime;
         }

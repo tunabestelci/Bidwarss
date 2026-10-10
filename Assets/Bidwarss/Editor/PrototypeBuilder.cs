@@ -19,15 +19,26 @@ namespace Bidwarss.Editor
         public static void Build()
         {
             if (EditorApplication.isPlaying) { Debug.LogError("Exit Play Mode first."); return; }
-            // Generated assets are intentionally never overwritten by rerunning this command.
-            if (AssetDatabase.IsValidFolder(Root))
+            // A finished scene is never overwritten by rerunning this command.
+            bool finished = AssetDatabase.LoadAssetAtPath<SceneAsset>(Root + "/Warehouse.unity") != null;
+            if (AssetDatabase.IsValidFolder(Root) && finished)
             {
                 if (!Application.isBatchMode) EditorUtility.DisplayDialog("Bidwarss", "Generated klasoru zaten var. Var olan Warehouse sahnesini ac. Yeniden uretmek icin once klasoru yedekleyip kaldir.", "Tamam");
                 return;
             }
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            // An earlier run that failed half way leaves a folder without a scene. Nothing is deleted:
+            // move it aside so the next run starts clean instead of stopping on the stale folder.
+            if (AssetDatabase.IsValidFolder(Root))
+            {
+                string aside = AssetDatabase.GenerateUniqueAssetPath(Root + "_incomplete");
+                string moveError = AssetDatabase.MoveAsset(Root, aside);
+                if (!string.IsNullOrEmpty(moveError)) throw new System.InvalidOperationException("Yarim kalmis " + Root + " klasoru tasinamadi: " + moveError);
+                Debug.LogWarning("Bidwarss: yarim kalmis uretim " + aside + " altina tasindi; yeniden uretiliyor.");
+            }
             Directory.CreateDirectory(Root);
-            AssetDatabase.Refresh();
+            // Shaders must be imported before Shader.Find, otherwise a first run in a fresh project fails.
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var itemMaterial = MakeMaterial("Items", Color.white);
             var floor = MakeMaterial("Floor", new Color(.16f, .23f, .31f));
@@ -157,6 +168,19 @@ namespace Bidwarss.Editor
         }
 
         public static void BuildBatch() => Build();
+
+        // The score service only accepts hashes on its allow-list (BIDWARSS_ALLOWED_RULES).
+        [MenuItem("Bidwarss/Print Leaderboard Rules Hash")]
+        public static void PrintRulesHash()
+        {
+            var world = Object.FindFirstObjectByType<WarehouseWorld>();
+            if (world == null || world.catalog == null)
+            {
+                Debug.LogError("Acik sahnede WarehouseWorld ve katalog bulunamadi. Depo sahnesini ac.");
+                return;
+            }
+            Debug.Log("Leaderboard rules hash: " + world.Rules.Fingerprint());
+        }
 
         static ItemCatalog.Entry Entry(string key,string title,int dollars,ItemCatalog.SampleShape shape,Color color) =>
             new ItemCatalog.Entry {key=key,title=title,baseDollars=dollars,sampleShape=shape,color=color};

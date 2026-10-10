@@ -1,5 +1,7 @@
 # Kasa Avcısı – Depo Level v7 (Unity)
 
+> **Bidwarss içinde kullanım:** Bu dosya orijinal paketin belgesidir. Bidwarss'ta depo **Bidwarss > Build Uploaded Depot (Co-op)** ile kurulur; ışık bake'i, test oyuncusu ve satış/çöp tetikleri kullanılmaz. Güncel kurulum ve oyun kuralları için kök [README.md](../../README.md) geçerlidir. Aşağıdaki Level Builder adımları yalnız deponun tek başına denenmesi içindir.
+
 Bu paket, web önizlemesindeki deponun aynısını Unity sahnesine tek tuşla kurar. Tüm ölçüler metre, eksenler Unity ile aynıdır: X doğu, Y yukarı, Z kuzey. Tek kaynak `Data/DepoLayout.json` dosyasıdır, web önizlemesi de bu dosyadan çizilir.
 
 Hedef sürüm Unity 2021.3 ve üstüdür (2022 LTS ve Unity 6 dahil). Cel-shade görünüm **URP** içindir. Built-in veya HDRP projesinde depo yine kurulur ama standart Lit materyallerle, mürekkep çizgisi olmadan.

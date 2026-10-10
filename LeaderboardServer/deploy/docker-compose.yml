@@ -1,0 +1,34 @@
+# TLS front door (Caddy gets and renews the certificate) + the score service.
+# Usage: create .env next to this file with
+#   SCORES_DOMAIN=scores.example.com
+#   BIDWARSS_SCORE_SECRET=<32+ random characters>
+#   BIDWARSS_ALLOWED_RULES=<hash from the Unity Console>
+# then: docker compose up -d --build
+services:
+  scores:
+    build: ..
+    restart: unless-stopped
+    environment:
+      BIDWARSS_SCORE_SECRET: ${BIDWARSS_SCORE_SECRET:?set in .env}
+      BIDWARSS_ALLOWED_RULES: ${BIDWARSS_ALLOWED_RULES:?set in .env}
+      BIDWARSS_TRUST_PROXY: "1"
+    volumes:
+      - scores-data:/data
+    expose:
+      - "8787"
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - scores
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SCORES_DOMAIN: ${SCORES_DOMAIN:?set in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+volumes:
+  scores-data:
+  caddy-data:

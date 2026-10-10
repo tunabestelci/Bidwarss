@@ -1,0 +1,32 @@
+# Install: copy server.py to /opt/bidwarss/server.py, this file to /etc/systemd/system/,
+# then create /etc/bidwarss/scores.env (chmod 600) containing:
+#   BIDWARSS_SCORE_SECRET=<32+ random characters>
+#   BIDWARSS_ALLOWED_RULES=<hash from the Unity Console>
+#   BIDWARSS_TRUST_PROXY=1
+# and run: systemctl enable --now bidwarss-scores
+[Unit]
+Description=Bidwarss verified leaderboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=bidwarss
+Group=bidwarss
+EnvironmentFile=/etc/bidwarss/scores.env
+Environment=BIDWARSS_SCORE_DB=/var/lib/bidwarss/scores.sqlite3
+Environment=BIDWARSS_SCORE_BIND=127.0.0.1
+Environment=PORT=8787
+ExecStart=/usr/bin/python3 /opt/bidwarss/server.py
+Restart=on-failure
+RestartSec=3
+StateDirectory=bidwarss
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/bidwarss
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

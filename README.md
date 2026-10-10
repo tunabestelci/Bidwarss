@@ -10,7 +10,7 @@ Repo klasöründe `git pull --ff-only` çalıştır. Unity kapalıyken PowerShel
 .\New-BidwarssProject.ps1 -ProjectPath 'C:\UnityProjects\Bidwarss'
 ```
 
-Bu komut kurulu Unity 6'yı bulur, Unity paket kayıt servisinden editöre uygun kararlı URP sürümünü seçer, Hub'ın şablon ekranını kullanmadan proje oluşturur, kaynakları kurar ve sahneyi üretir. Unity lisansı etkin olmalı ve paket indirmek için internet gerekir. Editör farklı diskteyse:
+Bu komut kurulu Unity 6'yı bulur (Windows, macOS ve Linux; macOS/Linux için PowerShell 7 `pwsh` gerekir), Unity paket kayıt servisinden editöre uygun kararlı URP sürümünü seçer, Hub'ın şablon ekranını kullanmadan proje oluşturur, kaynakları kurar, paketleri çözüp script'leri derleyen ayrı bir geçiş yapar ve sahneyi üretir. Derleme hatası olursa sahne üretimine geçmeden kendi logunda (`bidwarss-import.log`) durur. Editörü otomatik açmasını istemezsen `-NoLaunch` ekle. Unity lisansı etkin olmalı ve paket indirmek için internet gerekir. Editör farklı diskteyse:
 
 ```powershell
 .\New-BidwarssProject.ps1 -ProjectPath 'C:\UnityProjects\Bidwarss' -EditorPath 'D:\Unity\6000.5.0f1\Editor\Unity.exe'
@@ -22,9 +22,9 @@ Bu komut kurulu Unity 6'yı bulur, Unity paket kayıt servisinden editöre uygun
 .\Install-Bidwarss.ps1 -ProjectPath 'C:\UnityProjects\Bidwarss'
 ```
 
-Kurulum mevcut Bidwarss kaynaklarını ve proje ayarlarını `.bidwarss-backups` altında yedekler. Kullanıcının Generated/GeneratedV2 varlıklarını silmez. Aynı adlı kaynak dosyalarını günceller. Kurulum sırasında Unity kapalı olsun.
+Kurulum mevcut Bidwarss kaynaklarını ve proje ayarlarını `.bidwarss-backups` altında yedekler. Kullanıcının Generated/GeneratedV2 varlıklarını silmez. Aynı adlı kaynak dosyalarını günceller. Repoda silinen veya adı değişen kaynaklar projede kalıp çift tür hatası vermesin diye kurucu kopyaladığı dosyaları projede `.bidwarss-installed.txt` listesinde tutar; bir sonraki kurulumda artık kaynakta olmayanları silmez, yedek klasörüne (`Removed/`) taşır. Kurulum sırasında Unity kapalı olsun.
 
-Unity'de paketler derlendikten sonra **Bidwarss > Build Uploaded Depot (Co-op)**. Yukledigin depo ile yeni sahne `Assets/Bidwarss/GeneratedDepot/Bidwarss_Depot.unity` altinda olusur. Tekrar calistirirsan eski sahne korunur, yeni numarali kopya olusur. Basit eski prototip sahnesi `Assets/Bidwarss/GeneratedV2/Warehouse.unity`; Play > Oda Kur. V2 klasörü varsa üretici üzerine yazmaz, mevcut sahneyi aç. V1 `Generated` sahnesi eski sürümdür; V2 sahnesini kullan. Hata durumunda proje klasörünün yanındaki `bidwarss-create.log` / `bidwarss-build-scene.log` dosyalarına bak.
+Unity'de paketler derlendikten sonra **Bidwarss > Build Uploaded Depot (Co-op)**. Yukledigin depo ile yeni sahne `Assets/Bidwarss/GeneratedDepot/Bidwarss_Depot.unity` altinda olusur. Tekrar calistirirsan eski sahne korunur, yeni numarali kopya olusur. Basit eski prototip sahnesi `Assets/Bidwarss/GeneratedV2/Warehouse.unity`; Play > Oda Kur. V2 klasöründe tamamlanmış sahne varsa üretici üzerine yazmaz, mevcut sahneyi aç. Yarım kalmış (sahnesi olmayan) bir üretim `GeneratedV2_incomplete` altına taşınır ve temiz yeniden üretilir; hiçbir şey silinmez. Sahne üretildiğinde Console'a `Leaderboard rules hash` yazılır; sonradan görmek için **Bidwarss > Print Leaderboard Rules Hash**. V1 `Generated` sahnesi eski sürümdür; V2 sahnesini kullan. Hata durumunda proje klasörünün yanındaki `bidwarss-create.log` / `bidwarss-import.log` / `bidwarss-build-scene.log` dosyalarına bak.
 
 ## Oyun döngüsü
 
@@ -36,7 +36,10 @@ Unity'de paketler derlendikten sonra **Bidwarss > Build Uploaded Depot (Co-op)**
 - Q ile bir eşya bırak. Son yerleştirilen eşya geri alınabilir; değer ve ilerleme geri düşer.
 - Bütün kasalar açılıp bütün eşyalar doğru paletlere yerleşince sonuç kilitlenir. Kazanç, eşyaların gerçek değerlerinin toplamıdır; tekrar işlemle para çoğaltılamaz.
 - Sonuç ekranında durum dökümü, ekip, süre, para; host için aynı seed / yeni depo. TAB sonucu açar, ESC menüyü açar. Co-op menüde durmaz.
-- Günlük senaryo UTC tarihini seed yapar. Aynı katalog ve kurallar + aynı seed aynı içerikleri üretir.
+- Günlük senaryo UTC tarihini seed yapar (makinenin kültüründen bağımsız, Miladi takvim). Aynı katalog ve kurallar + aynı seed aynı içerikleri üretir.
+- Gamepad: sol çubuk hareket, sağ çubuk bakış, A = E (kasa için basılı tut), B = Q, Start = ESC, Geri = TAB. Menüler fare ister.
+- Ayarlar (ana menü ve mola menüsü): fare/çubuk hassasiyeti, ses, müzik, görüş alanı. Bu bilgisayarda kaydedilir, ağa gitmez.
+- Ses çalışma anında üretilir: kasa açılışı, alma/koyma/bırakma, adımlar ve ortam müziği. Depoda ses dosyası yoktur; yazılı sesler sonra aynı çağrılara bağlanabilir.
 
 ## Durum ve para
 
@@ -66,22 +69,28 @@ Warehouse State üzerindeki `totalGroups` toplam eşya sayısını 10'lu gruplar
 
 Unity Netcode for GameObjects 2.13.3+, Unity Transport, host/server otoritesi. Sahne durumunu sunucu üretir; istemci yalnızca hareket ve etkileşim niyeti gönderir. Sunucu mesafe/bakış/engel, sahiplik, istif türü ve kapasitesini doğrular. Geç katılan oyuncu güncel durumu alır; ayrılan oyuncunun eşyaları girişteki kurtarma alanına bırakılır.
 
-Editor + ayrı Windows build ile test et. Aynı PC'de `127.0.0.1`, aynı ağda host'un IPv4 adresi. UDP 7777 kullanılır. İnternette doğrudan bağlantı için ağın buna izin vermesi gerekir. Relay/Steam daveti, otomatik NAT geçişi, host devri ve yarım kalmış depo kaydı bu sürümde yok. Host ayrılırsa oturum biter. Hareket sunucu otoritelidir; yüksek gecikmede istemci tahmini henüz yok. Herkes aynı paket sürümleri ve kataloğu kullanmalı; kural hash'i farklıysa bağlantı reddedilir.
+Editor + ayrı Windows build ile test et. Adres alanına IPv4 adresi veya alan adı yazılır, istenirse `:port` eklenir (`192.168.1.10:7800`); aynı PC'de `127.0.0.1`. Varsayılan UDP 7777'dir ve ODA KUR aynı alandaki portu dinler. Host mola menüsünde (ESC) odayı kilitleyebilir (yeni oyuncu alınmaz) ve bir oyuncuyu odadan atabilir. Başsız sunucu (`-bidwarssServer`) depo bitince sonucu 30 saniye gösterir, skor yüklemesi bitince yeni depoyu kendisi başlatır: [DedicatedServer/README.md](DedicatedServer/README.md). İnternette doğrudan bağlantı için ağın buna izin vermesi gerekir. Relay/Steam daveti, otomatik NAT geçişi, host devri ve yarım kalmış depo kaydı bu sürümde yok. Host ayrılırsa oturum biter. Hareket sunucu otoritelidir; yüksek gecikmede istemci tahmini henüz yok. Herkes aynı paket sürümleri ve kataloğu kullanmalı; kural hash'i farklıysa bağlantı reddedilir.
 
 ## Rekorlar
 
 Yerel ilk 100 sonuç `Application.persistentDataPath/bidwarss-results-v2.json` içinde kalır; yerel dosyalar doğrulanmış dünya puanı sayılmaz.
 
-**Dünya sıralaması henüz yayında değil.** Çalıştırılabilir servis ve Unity istemcisi `LeaderboardServer/` ile hazır. Kurulum: [LeaderboardServer/README.md](LeaderboardServer/README.md). Bağlı servis olmadan Dünya sekmesi bunu açıkça gösterir. Dünya kayıtları aynı kural hash'i ve ekip büyüklüğüne göre ayrılır; HTTP API ayrıca seed filtresi destekler. Oyuncu isimleri kullanıcı tarafından yazılır, doğrulanmış hesap kimliği değildir.
+**Dünya sıralaması henüz yayında değil.** Çalıştırılabilir servis ve Unity istemcisi `LeaderboardServer/` ile hazır. Kurulum: [LeaderboardServer/README.md](LeaderboardServer/README.md). Bağlı servis olmadan Dünya sekmesi bunu açıkça gösterir. Dünya kayıtları aynı kural hash'i ve ekip büyüklüğüne göre ayrılır; HTTP API ayrıca seed filtresi destekler. Oyuncu isimleri kullanıcı tarafından yazılır, doğrulanmış hesap kimliği değildir. Rekor tablosunda 1–4 kişi, Günlük (bugünün seed'i) ve yerel sekmede "Bu kurallar" süzgeçleri vardır; Dünya sekmesi aynı süzgeçlerle sunucudan ister. Servis hız ve bağlantı sınırı, yasak kelime listesi, isteğe bağlı TLS, sayfalama ve Docker/systemd dosyaları içerir.
+
+## Build
+
+**Bidwarss > Build > Windows Client / Dedicated Server (Windows) / Dedicated Server (Linux)** `Builds/` altına çıktı verir; komut satırı: `Unity -batchmode -quit -projectPath <proje> -executeMethod Bidwarss.Editor.BuildTools.LinuxServer`. Dedicated Server için Unity Hub'dan ilgili modül kurulu olmalı.
 
 ## Doğrulama
 
 ```sh
 dotnet run --project Tests/DomainTests.csproj
 python -m unittest discover -s LeaderboardServer -v
+python -m pip install numpy
+python -m unittest discover -s Tests -p "test_*.py" -v
 ```
 
-2.000 seed üzerinde 266.033 C# kontrolü geçti. Skor servisinin kimlik doğrulama, tekrar gönderim, çakışma, sıralama, filtreleme ve HTTP okuma testleri geçti. Bu çalışma ortamında Unity Editor bulunmadığından Unity derleme/Play Mode ve iki gerçek istemcili oturum henüz çalıştırılmadı. [Manuel kontrol listesi](Documentation/VALIDATION.md).
+`.github/workflows/ci.yml` bunları, PowerShell sözdizimini ve skor servisi Docker imajını her push'ta çalıştırır. `Tests/test_repo_hygiene.py` Unity gerektirmeden `.meta`/GUID bütünlüğünü, parantez dengesini, bileşen dosya adlarını ve Domain'in motor bağımsızlığını denetler. Unity derleme/Play Mode ve iki gerçek istemcili oturum hâlâ elle doğrulanmalıdır. [Manuel kontrol listesi](Documentation/VALIDATION.md).
 
 ### Unity 6.5 EntityId / CS0619 hatasi
 

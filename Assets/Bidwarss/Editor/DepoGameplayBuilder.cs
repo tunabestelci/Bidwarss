@@ -93,6 +93,7 @@ namespace Bidwarss.Editor
             EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene);AssetDatabase.SaveAssets();
             var buildScenes=EditorBuildSettings.scenes.Where(s=>s.path!=output).ToList();buildScenes.Insert(0,new EditorBuildSettingsScene(output,true));EditorBuildSettings.scenes=buildScenes.ToArray();
             Selection.activeGameObject=world.gameObject;
+            Debug.Log("Leaderboard rules hash: "+world.Rules.Fingerprint());
             Debug.Log("Bidwarss depo hazir: "+output+" | 10 konteyner, "+world.totalGroups+" aktif raf, 4 spawn. Play > Oda Kur.");
         }
         static Transform PrepareDoor(Transform door,Transform container,float hingeZ,int id)

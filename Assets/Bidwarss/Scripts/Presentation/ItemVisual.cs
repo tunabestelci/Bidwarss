@@ -83,6 +83,7 @@ namespace Bidwarss
             hitbox.enabled=!held;
             bool snap=!positioned||previous!=state.location||!held;
             transform.SetPositionAndRotation(snap?position:Vector3.Lerp(transform.position,position,1-Mathf.Exp(-22*Time.deltaTime)),rotation);
+            if(positioned&&previous!=state.location)RevealEffects.ItemSound(previous,state.location,position);
             positioned=true;previous=state.location;
         }
     }

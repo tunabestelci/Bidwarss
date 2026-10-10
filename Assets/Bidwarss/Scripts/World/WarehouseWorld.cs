@@ -38,8 +38,13 @@ namespace Bidwarss
         readonly Dictionary<ulong, string> roster = new Dictionary<ulong, string>();
         double[] holdStarted;
         bool[] knownOpen;
-        string viewedRun;
+        FixedString64Bytes viewedRun;
         float nextHoldUpdate;
+        // Reused every frame so presentation does not allocate.
+        readonly Dictionary<ulong,int> carryIndices=new Dictionary<ulong,int>();
+        StackLayout[] layouts;
+        bool[] layoutsReady;
+        bool targetsEnsured;
         public GameRules Rules => catalog.CreateRules(crates.Length, totalGroups);
         public double Elapsed => StartedAt.Value <= 0 ? 0 : Math.Max(0, (Completed.Value ? FinishedAt.Value : NetworkManager.ServerTime.Time) - StartedAt.Value);
         public int OpenCount { get { int n=0; for(int i=0;i<Crates.Count;i++) if(Crates[i].opened)n++; return n; } }
@@ -70,7 +75,7 @@ namespace Bidwarss
         void ClearViews() { foreach(var v in views.Values) if(v != null) Destroy(v.gameObject); views.Clear(); }
         void ResetPresentation()
         {
-            ClearViews(); viewedRun = RunId.Value.ToString(); knownOpen = new bool[Crates.Count];
+            ClearViews(); viewedRun = RunId.Value; knownOpen = new bool[Crates.Count];
             // Existing opened crates at late join are snapshots, not new reveal events.
             for(int i=0;i<Crates.Count;i++) knownOpen[i]=Crates[i].opened;
         }
@@ -78,7 +83,7 @@ namespace Bidwarss
         {
             if (!IsServer) return;
             var rules = Rules; rules.Validate();
-            if(slots.Length < totalGroups || itemOrigins.Length != crates.Length || lids.Length != crates.Length)
+            if(slots.Length < totalGroups || stackLabels==null || stackLabels.Length < totalGroups || itemOrigins.Length != crates.Length || lids.Length != crates.Length)
                 throw new InvalidOperationException("Depo sahnesini Bidwarss menüsünden V2 için yeniden oluştur.");
             Engine = new RoundEngine(rules, seed);
             Completed.Value=false; StartedAt.Value=0; FinishedAt.Value=0; FinalDollars.Value=0;
@@ -174,11 +179,19 @@ namespace Bidwarss
         // Two rows of five objects. Rotation follows the pallet, independently of its model scale.
         public Vector3 StackPosition(int stack,int index)
         {
-            var layout=slots[stack].GetComponent<StackLayout>();
+            var layout=LayoutFor(stack);
             return layout!=null?layout.Center(index):slots[stack].position+slots[stack].rotation*new Vector3((index%2-.5f)*.47f,.30f,(index/2-2)*.40f);
         }
+        // GetComponent is cached per pallet; slots never change after the scene loads.
+        StackLayout LayoutFor(int stack)
+        {
+            if(layouts==null||layouts.Length!=slots.Length){layouts=new StackLayout[slots.Length];layoutsReady=new bool[slots.Length];}
+            if(stack<0||stack>=layouts.Length)return null;
+            if(!layoutsReady[stack]){layouts[stack]=slots[stack]!=null?slots[stack].GetComponent<StackLayout>():null;layoutsReady[stack]=true;}
+            return layouts[stack];
+        }
         Quaternion StackRotation(int stack,int index)
-        {var layout=slots[stack].GetComponent<StackLayout>();return layout!=null?layout.Rotation(index):slots[stack].rotation;}
+        {var layout=LayoutFor(stack);return layout!=null?layout.Rotation(index):slots[stack].rotation;}
         ItemState ToState(RoundItem item,Vector3 position)
         {
             bool sealedItem=item.location==ItemLocation.Sealed;
@@ -223,7 +236,7 @@ namespace Bidwarss
             if(id<0)return;
             Vector3 center=player.transform.position+player.transform.forward*1.15f;
             if(!Physics.Raycast(center+Vector3.up*.8f,Vector3.down,out var floor,2.5f,~0,QueryTriggerInteraction.Ignore))
-            {player.Feedback("Burada esyayi birakacak zemin yok.");return;}
+            {player.Feedback("Burada eşyayı bırakacak zemin yok.");return;}
             center=floor.point+Vector3.up*.23f;
             Physics.SyncTransforms();
             foreach(var hit in Physics.OverlapBox(center,new Vector3(.22f,.2f,.22f),Quaternion.identity,~0,QueryTriggerInteraction.Ignore))
@@ -269,10 +282,14 @@ namespace Bidwarss
         {
             if(!IsSpawned)return;
             // Older generated scenes gain a usable target on the entire pallet without regeneration.
-            for(int i=0;i<slots.Length;i++)
-                if(slots[i]!=null && slots[i].GetComponent<InteractionTarget>()==null)
-                {var target=slots[i].gameObject.AddComponent<InteractionTarget>();target.kind=TargetKind.Slot;target.id=i;}
-            if(viewedRun!=RunId.Value.ToString() || knownOpen==null || knownOpen.Length!=Crates.Count)ResetPresentation();
+            if(!targetsEnsured)
+            {
+                targetsEnsured=true;
+                for(int i=0;i<slots.Length;i++)
+                    if(slots[i]!=null && slots[i].GetComponent<InteractionTarget>()==null)
+                    {var target=slots[i].gameObject.AddComponent<InteractionTarget>();target.kind=TargetKind.Slot;target.id=i;}
+            }
+            if(!viewedRun.Equals(RunId.Value) || knownOpen==null || knownOpen.Length!=Crates.Count)ResetPresentation();
             for(int i=0;i<Crates.Count;i++)
             {
                 bool open=Crates[i].opened;
@@ -282,8 +299,9 @@ namespace Bidwarss
             }
             for(int i=0;i<slots.Length;i++)
             {
+                if(slots[i]==null)continue;
                 slots[i].gameObject.SetActive(i<Stacks.Count);
-                if(i<Stacks.Count && stackLabels[i]!=null)
+                if(i<Stacks.Count && i<stackLabels.Length && stackLabels[i]!=null)
                 {
                     var s=Stacks[i];
                     string labelText=catalog.entries[s.kind].title+"\n"+s.count+" / 10";
@@ -296,7 +314,7 @@ namespace Bidwarss
                 }
             }
             int carryIndex=0;
-            var carryIndices=new Dictionary<ulong,int>();
+            carryIndices.Clear();
             for(int i=0;i<Items.Count;i++)
             {
                 var item=Items[i]; if(item.location==ItemLocation.Sealed)continue;
@@ -310,7 +328,7 @@ namespace Bidwarss
                     pos=owner.transform.position+Vector3.up*(.73f+carryIndex*.065f)+owner.transform.forward*.9f+owner.transform.right*.32f;
                     rot=owner.transform.rotation;
                 }
-                view.UpdateState(item,pos,rot,item.location==ItemLocation.Stacked&&slots[item.slot].GetComponent<StackLayout>()!=null?.85f:1);
+                view.UpdateState(item,pos,rot,item.location==ItemLocation.Stacked&&LayoutFor(item.slot)!=null?.85f:1);
             }
         }
     }
