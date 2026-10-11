@@ -1,9 +1,14 @@
 # Bu daha onceki gonderilen Assets guncellemesini Unity projene uygular.
 # Kullanim (Unity KAPALI iken):  powershell -ExecutionPolicy Bypass -File .\Apply-Update.ps1
 # Baska proje yolu icin:        ... -File .\Apply-Update.ps1 -Project "D:\Yol\Bidwarss"
-param([string]$Project = "C:\UnityProjects\Bidwarss")
+param([string]$Project = "C:\UnityProjects\Bidwarss", [switch]$Force)
 $ErrorActionPreference = "Stop"
-if (Get-Process Unity -ErrorAction SilentlyContinue) { Write-Host "Unity acik. Once Unity'yi kapat, sonra tekrar calistir." -ForegroundColor Red; exit 1 }
+# Unity bu projeyi acik tutuyorsa Temp\UnityLockfile kilitli kalir (Unity Hub vb. buna takilmaz).
+$lock = Join-Path $Project "Temp\UnityLockfile"
+if (-not $Force -and (Test-Path $lock)) {
+    try { $fs = [System.IO.File]::Open($lock, 'Open', 'ReadWrite', 'None'); $fs.Close() }
+    catch { Write-Host "Bu proje Unity'de hala acik. Unity'yi kapat ya da -Force ile calistir." -ForegroundColor Red; exit 1 }
+}
 $src = Join-Path $PSScriptRoot "Assets"
 if (-not (Test-Path "$Project\Assets")) { Write-Host "Proje bulunamadi: $Project\Assets" -ForegroundColor Red; exit 1 }
 $backup = Join-Path (Split-Path $Project -Parent) ("Bidwarss-yedek-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
