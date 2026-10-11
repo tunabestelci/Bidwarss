@@ -95,9 +95,14 @@ namespace Bidwarss
             return tiers[Mathf.Clamp((int)rarity, 0, tiers.Length - 1)];
         }
 
-        public GameRules CreateRules(int crates, int groups, int[] crateKinds = null, int packedKind = -1) => new GameRules {
-            crateCount = crates, totalGroups = groups, conditions = conditions, crateKinds = crateKinds, packedKind = packedKind,
-            randomRound = randomRound, items = Array.ConvertAll(entries, ToRule) };
+        public GameRules CreateRules(int crates, int groups, int[] crateKinds = null, int packedKind = -1)
+        {
+            var rules = new GameRules {
+                crateCount = crates, totalGroups = groups, conditions = conditions, crateKinds = crateKinds, packedKind = packedKind,
+                randomRound = randomRound, items = Array.ConvertAll(entries, ToRule) };
+            if (randomRound) rules.AutoFit();   // 3500-4500 esyaya ulasmak icin kucuk/hafif turlerin siniri elimizdeki turlere gore otomatik buyur
+            return rules;
+        }
 
         /// <summary>Kasa başına ayrılan eşya anahtarlarını (sahnede kayıtlı) katalog sırasına çevirir; -1 = boş.</summary>
         public int[] CrateItemsFromKeys(string[] keys, int crates)

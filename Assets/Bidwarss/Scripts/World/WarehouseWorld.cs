@@ -24,7 +24,7 @@ namespace Bidwarss
         public TextMesh[] stackLabels;
         [Tooltip("Her kasada hangi eşya var (katalog anahtarı; Loot > 2 doldurur). Kasalar bu içeriğe göre boyutlanıp dizildi.")]
         public string[] crateItemKeys;
-        [Range(1,200)] public int totalGroups = 12;
+        [Range(1,600)] public int totalGroups = 12;
         [Tooltip("Sahnede kasa animasyonu yoksa bir kasayı açmak için E basılı tutma süresi (animasyonlu kasalarda kasanın kendi süresi geçerli: vida başına / bant kesme).")]
         [Range(.5f,8)] public float openSeconds = 3.4f;
         public NetworkList<ItemState> Items;

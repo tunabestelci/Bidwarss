@@ -81,14 +81,26 @@ namespace Bidwars.Loot.EditorTools
             return list.Count > 0 ? list : null;
         }
 
-        /// <summary>Rastgele depo: bir turdaki palet butcesi = turda cikabilecek tum esyalarin (en cok adet) palet sayisinin %85 i, 24-80 arasi.</summary>
+        /// <summary>Rastgele depo: istenen palet sayisi = DepotMaxItems / 10 (4500 esya = 450 palet), turdaki tum esyalarin (en cok adet)
+        /// palet sayisini gecmeyecek sekilde. Sahnede o kadar raf yoksa EnsureSlots olabildigince ekler, kalani raporlanir.</summary>
         public static int RandomPalletBudget(ItemCatalog cat, int[] crateKinds)
         {
             var probe = cat.CreateRules(crateKinds.Length, 1, crateKinds, (int)CrateKind.Cardboard);
             int pallets = 0;
             foreach (var r in probe.items)
                 if (r.InPool && probe.ManifestKind(r) >= 0) pallets += (r.EffectiveMaxCount() + GameRules.StackSize - 1) / GameRules.StackSize;
-            return Mathf.Clamp(Mathf.CeilToInt(pallets * 0.85f), 24, 80);
+            int wished = (GameRules.DepotMaxItems + GameRules.StackSize - 1) / GameRules.StackSize;
+            return Mathf.Clamp(Mathf.Min(wished, pallets), 24, GameRules.MaxStacks);
+        }
+
+        /// <summary>Kasalarin toplam isteyecegi palet sayisi (her esya turu icin kasalarin toplam kapasitesi / 10, yukari yuvarlanir).</summary>
+        public static int PalletsOf(List<Box> boxes)
+        {
+            var perKey = new Dictionary<string, int>();
+            foreach (var b in boxes) { string k = b.key ?? "?"; int n; perKey.TryGetValue(k, out n); perKey[k] = n + Mathf.Max(1, b.count); }
+            int pallets = 0;
+            foreach (var kv in perKey) pallets += (kv.Value + GameRules.StackSize - 1) / GameRules.StackSize;
+            return pallets;
         }
 
         /// <summary>Olcmeden tahmini kaplama (koli icin kesin: ParcelSize metre cinsinden dis olcu).</summary>

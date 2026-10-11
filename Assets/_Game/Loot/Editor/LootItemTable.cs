@@ -150,6 +150,60 @@ namespace Bidwars.Loot.EditorTools
             D("Arcade_cabins1/Arcade_cabins1_TronCabin", "arcade_tron", "Arcade: Tron", "Oyun", 0.66f, 1.8f, 0.8f, E, 2500, false, 1.8f, U, 1, 120f, 7f, null, 3),
         };
 
+        // ---- Tabloda olmayan prefab'lar icin ad tahmini ----
+        // Yeni atilan bir prefab (ornek: sakiz makinesi, dosya dolabi) tabloda yoksa 40 cm'lik varsayilan kutu olurdu. Adinda asagidaki
+        // sozcuklerden biri geciyorsa gercek hayattaki ortalama olcu ve kilo kullanilir (bir kez; sonra Loot Editoru'nde degistirebilirsin).
+        // Tahmin edilen her esya katalog kurulumunda "tahmini olcu" diye loga yazilir: gercek olcusunu LootItemTable'a satir olarak ekle.
+        public sealed class Guess
+        {
+            public string[] tokens; public string title, category; public Vector3 size; public float kg; public bool byHeight, lying; public int dollars, count;
+        }
+        static Guess G(string tokens, string title, string cat, float w, float h, float d, float kg, bool byHeight, int dollars, bool lying, int count)
+        {
+            return new Guess { tokens = tokens.Split(','), title = title, category = cat, size = new Vector3(w, h, d), kg = kg, byHeight = byHeight, dollars = dollars, lying = lying, count = count };
+        }
+        public static readonly Guess[] Guesses =
+        {
+            G("gumball,bubblegum,sakiz", "Sakız Makinesi", "Oyun", .40f, .90f, .40f, 14f, true, 160, false, 8),
+            G("document,filing,file_cab,dosya", "Dosya Dolabı", "Mobilya", .47f, 1.32f, .62f, 55f, true, 90, false, 5),
+            G("jukebox", "Jukebox", "Müzik", .90f, 1.40f, .65f, 150f, true, 900, false, 3),
+            G("pinball", "Langırt/Pinball Makinesi", "Oyun", .70f, 1.50f, 1.40f, 100f, true, 700, false, 3),
+            G("piano", "Piyano", "Müzik", 1.50f, 1.20f, .65f, 220f, false, 600, false, 3),
+            G("vault,safe_box,strongbox,steel_safe", "Çelik Kasa", "Ev", .50f, .65f, .50f, 90f, true, 250, false, 5),
+            G("cabinet,wardrobe,dolap,cupboard", "Dolap", "Mobilya", .80f, 1.60f, .45f, 40f, true, 120, false, 5),
+            G("sofa,couch", "Kanepe", "Mobilya", 1.90f, .85f, .90f, 45f, false, 150, false, 5),
+            G("armchair,koltuk", "Koltuk", "Mobilya", .80f, .90f, .85f, 20f, true, 110, false, 8),
+            G("mannequin", "Manken", "Dekor", .40f, 1.80f, .30f, 8f, true, 60, true, 8),
+            G("barrel,varil", "Varil", "Ev", .60f, .90f, .60f, 30f, true, 40, false, 8),
+            G("suitcase,luggage,trunk,bavul", "Bavul", "Ev", .70f, .45f, .28f, 8f, false, 45, true, 10),
+            G("toolbox", "Alet Çantası", "Araç-Gereç", .45f, .25f, .22f, 7f, false, 35, false, 10),
+            G("anvil,incir", "Örs", "Araç-Gereç", .60f, .35f, .25f, 50f, false, 90, false, 5),
+            G("typewriter,daktilo", "Daktilo", "Elektronik", .38f, .20f, .35f, 6f, false, 70, false, 10),
+            G("microscope,mikroskop", "Mikroskop", "Elektronik", .20f, .35f, .20f, 4f, true, 80, false, 10),
+            G("sewing,dikis", "Dikiş Makinesi", "Ev", .50f, .35f, .20f, 9f, false, 60, false, 10),
+            G("telephone,phone,telefon", "Telefon", "Elektronik", .22f, .15f, .20f, 1.2f, false, 30, false, 15),
+            G("camera,kamera", "Fotoğraf Makinesi", "Elektronik", .15f, .10f, .10f, .8f, false, 70, false, 15),
+            G("globe,dunya", "Dünya Küresi", "Dekor", .40f, .50f, .40f, 2f, true, 40, false, 10),
+            G("lantern,fener", "Fener", "Dekor", .20f, .35f, .20f, 1.5f, true, 25, false, 15),
+            G("lamp,lamba", "Lamba", "Dekor", .25f, .50f, .25f, 2f, true, 35, false, 10),
+            G("stool,tabure", "Tabure", "Mobilya", .35f, .50f, .35f, 3f, true, 20, false, 10),
+            G("chair,sandalye", "Sandalye", "Mobilya", .45f, .90f, .48f, 5f, true, 30, true, 10),
+            G("clock,saat", "Saat", "Dekor", .30f, .40f, .12f, 1.5f, true, 40, false, 10),
+            G("motorcycle,motorbike", "Motosiklet", "Araç", .75f, 1.10f, 2.10f, 190f, false, 3200, true, 3),
+            G("bicycle,bike", "Bisiklet", "Araç", .60f, 1.05f, 1.75f, 15f, false, 140, true, 5),
+        };
+
+        /// <summary>Prefab/anahtar adindan gercek hayat tahmini (yoksa null).</summary>
+        public static Guess GuessFor(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            string text = name.ToLowerInvariant().Replace(' ', '_');
+            foreach (var g in Guesses)
+                foreach (var t in g.tokens)
+                    if (text.Contains(t)) return g;
+            return null;
+        }
+
         public static Def FindKey(string key)
         {
             foreach (var d in All) if (d.key == key) return d;

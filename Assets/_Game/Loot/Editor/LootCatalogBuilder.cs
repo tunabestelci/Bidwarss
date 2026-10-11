@@ -115,14 +115,20 @@ namespace Bidwars.Loot.EditorTools
                 e.packSize = def.pack;
                 e.ledgerId = def.ledger; e.ledgerStamp = null; e.conditionPrices = null;   // defter / formul yeniden doldurur
                 e.roundCount = def.count;
+                if (e.maxCount >= 20) e.maxCount = 0;   // eski surum / defter 20 yazmisti: 0 = boy ve kiloya gore otomatik
                 e.sizeVersion = SizeVersion;
             }
             // tabloda olmayan (yeni atilan) esyalar: her turda boyuna gore 3-10 tane
             foreach (var e in list)
             {
                 if (DefOf(e) != null || e.sizeVersion >= SizeVersion) continue;
-                float m = Mathf.Max(e.realSize.x, Mathf.Max(e.realSize.y, e.realSize.z));
-                e.roundCount = m < 0.35f ? 10 : m < 1f ? 5 : 3;
+                if (!ApplyGuess(catalog, e, report))
+                {
+                    float m = Mathf.Max(e.realSize.x, Mathf.Max(e.realSize.y, e.realSize.z));
+                    e.roundCount = m < 0.35f ? 10 : m < 1f ? 5 : 3;
+                    report.AppendLine("  ? ÖLÇÜSÜ BİLİNMİYOR: " + (e.visualPrefab != null ? e.visualPrefab.name : e.key) + " = " + Fmt(e.realSize) + " cm (varsayılan). LootItemTable'a satır ekle ya da Loot Editörü'nde ölçüsünü gir.");
+                }
+                if (e.maxCount >= 20) e.maxCount = 0;
                 e.sizeVersion = SizeVersion;
             }
             if (fixes.Length > 0) log.AppendLine("Model düzeltmeleri:\n" + fixes);
@@ -144,6 +150,7 @@ namespace Bidwars.Loot.EditorTools
                 if (kind < 0) continue;
                 var def = DefOf(e);
                 int want = def != null ? def.pack : (kind == (int)CrateKind.Cardboard ? 5 : 3);
+                if (kind == (int)CrateKind.Small) want = SmallCratePack(e);   // ahsap kucuk kasa: kucuk esyadan birkac tane (3500-4500 esya icin)
                 e.packSize = Mathf.Clamp(Mathf.Min(want, LootPools.MaxPerCrate(e, (CrateKind)kind)), 1, 10);
                 totalItems += e.roundCount;
             }
@@ -151,12 +158,22 @@ namespace Bidwars.Loot.EditorTools
             log.AppendLine(catalog.randomRound ? "Rastgele depo açık: her oyunda eşya türleri, adetler (5/10/15/20, boy ve kiloya göre sınırlı) ve dolu kasalar yeniden çekilir (" + catalog.entries.Count(x => x.roundCount > 0 && x.crateMask != 0) + " tür havuzda)." : "Her turda: " + totalItems + " eşya (" + catalog.entries.Count(x => x.roundCount > 0 && x.crateMask != 0) + " tür).");
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
+            log.AppendLine(LootReport.Write(catalog));
             string msg = "[Loot] Katalog: " + catalog.entries.Length + " eşya (" + added + " yeni" + (removedSamples > 0 ? ", " + removedSamples + " eski örnek eşya çıkarıldı" : "") + (unknown > 0 ? ", " + unknown + " tablo dışı" : "") + "). Yedek: " + backup + "\n" + log;
             if (verbose) Debug.Log(msg);
             return msg;
         }
 
         const int SizeVersion = 11;
+
+        // Kucuk ahsap kasada bir kasaya sigan adet: kucuk esya 6, orta 4, buyukce 2, boy boyu 1; kasa 60 kg'dan agir olmasin.
+        static int SmallCratePack(ItemCatalog.Entry e)
+        {
+            float longest = Mathf.Max(e.realSize.x, Mathf.Max(e.realSize.y, e.realSize.z));
+            int n = longest <= .45f ? 6 : longest <= .7f ? 4 : longest <= 1f ? 2 : 1;
+            if (e.kg > 0f) n = Mathf.Min(n, Mathf.Max(1, Mathf.FloorToInt(60f / e.kg)));
+            return Mathf.Max(1, n);
+        }
 
         // Tablo satiri: once anahtar, olmazsa prefab yolu (anahtari degismis / tekrarlanmis eski girdiler de tablodan beslenir).
         static LootItemTable.Def DefOf(ItemCatalog.Entry e)
@@ -399,6 +416,22 @@ namespace Bidwars.Loot.EditorTools
                 key = key.Length > 40 ? key.Substring(0, 40) : key, title = name.Replace('_', ' '), baseDollars = 80, selectionWeight = tier.weight, maxGroups = tier.maxGroups,
                 color = tier.color, visualPrefab = prefab, rarity = ItemRarity.Common, realSize = new Vector3(.4f, .4f, .4f), category = "Diğer",
             };
+        }
+
+        // Tabloda olmayan eşya: addan gerçek hayat tahmini (bir kez). true = tahmin uygulandı.
+        static bool ApplyGuess(ItemCatalog catalog, ItemCatalog.Entry e, System.Text.StringBuilder report)
+        {
+            string prefabName = e.visualPrefab != null ? e.visualPrefab.name : "";
+            var g = LootItemTable.GuessFor(e.key + " " + prefabName + " " + e.title);
+            if (g == null) return false;
+            Vector3 size = FitSize(e.visualPrefab, g.size, g.byHeight);
+            var tier = catalog.Tier(ItemRarity.Common);
+            e.title = g.title; e.category = g.category; e.realSize = size; e.kg = g.kg; e.lyingOK = g.lying;
+            e.baseDollars = g.dollars; e.roundCount = g.count; e.ledgerStamp = null; e.conditionPrices = null;
+            e.rarity = ItemRarity.Common; e.selectionWeight = tier.weight; e.maxGroups = tier.maxGroups; e.color = tier.color;
+            e.crateMask = LootPools.Mask(e);
+            report.AppendLine("  ~ TAHMİNİ ÖLÇÜ: " + prefabName + " -> " + g.title + ": " + Fmt(size) + " cm, " + g.kg + " kg (LootItemTable'a satır ekleyerek kesinleştir)");
+            return true;
         }
     }
 }

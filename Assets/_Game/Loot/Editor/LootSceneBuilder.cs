@@ -55,20 +55,28 @@ namespace Bidwars.Loot.EditorTools
         // Eski (turda adet yok) mod icin kasa listesi; manifest modunda her esya turunun kendi kasalari (LootLayout).
         public static System.Collections.Generic.List<LootLayout.Box> PlanBoxes(int containers) { return PlanBoxes(LootCatalogBuilder.FindCatalog(false), containers); }
 
-        public static System.Collections.Generic.List<LootLayout.Box> PlanBoxes(ItemCatalog catalog, int containers)
+        public static System.Collections.Generic.List<LootLayout.Box> PlanBoxes(ItemCatalog catalog, int containers) { return PlanBoxes(catalog, containers, 0); }
+
+        /// <summary>slots: sahnedeki palet sayisi (0 = bilinmiyor). Rastgele depoda ayrilan kasa havuzu hem konteynerlere hem de
+        /// paletlere gore otomatik kucultulur: boylece her turda kasalarin cogu dolu olur (bos konteyner/bos raf kalmaz).</summary>
+        public static System.Collections.Generic.List<LootLayout.Box> PlanBoxes(ItemCatalog catalog, int containers, int slots)
         {
             var boxes = LootLayout.Boxes(catalog);
             if (boxes != null)
             {
                 if (catalog.randomRound)
                 {
-                    // Rastgele depo: tum havuz konteynerlere sigmiyorsa ayrilan kasa sayisi (dolayisiyla turdaki en cok adet) azaltilir.
-                    foreach (var scale in new[] { 1f, 0.85f, 0.7f, 0.55f, 0.45f, 0.35f, 0.25f })
+                    float scale = 1f;
+                    for (int step = 0; step < 60; step++, scale *= 0.92f)
                     {
                         boxes = LootLayout.Boxes(catalog, scale);
                         float need, have; LootLayout.Totals(boxes, containers, out need, out have);
-                        if (need <= have * 0.95f) { if (scale < 1f) Debug.LogWarning("[Loot] Rastgele depo: kasalar konteynerlere sığsın diye eşya başına ayrılan kasa %" + Mathf.RoundToInt(scale * 100) + "'e düşürüldü (turdaki en çok adet buna göre azalır)."); break; }
+                        bool fitsContainers = need <= have * 0.95f;
+                        bool fitsPallets = slots <= 0 || LootLayout.PalletsOf(boxes) <= Mathf.CeilToInt(slots * 1.15f);
+                        LastPlanNote = "ayrilan kasa havuzu %" + Mathf.RoundToInt(scale * 100) + " (" + boxes.Count + " kasa, konteyner doluluk %" + Mathf.RoundToInt(need / Mathf.Max(1f, have) * 100f) + ", " + LootLayout.PalletsOf(boxes) + " palet / sahnede " + slots + ")";
+                        if (fitsContainers && fitsPallets) break;
                     }
+                    if (scale < 0.999f) Debug.LogWarning("[Loot] Rastgele depo: " + LastPlanNote + ". Konteyner ya da palet sayısı arttıkça havuz büyür.");
                 }
                 return boxes;
             }
@@ -82,6 +90,8 @@ namespace Bidwars.Loot.EditorTools
                 }
             return boxes;
         }
+
+        public static string LastPlanNote = "";
 
         public static CrateKind[] DefaultLayoutFor(int containers)
         {
@@ -149,7 +159,15 @@ namespace Bidwars.Loot.EditorTools
 
             int containers = world.crates.Length;
             var catalog = world.catalog != null ? world.catalog : LootCatalogBuilder.FindCatalog(false);
-            var plan = PlanBoxes(catalog, containers);
+            // Once paletler: rastgele depoda istenen palet sayisi (DepotMaxItems / 10) kadar raf paleti eklenir; kasa havuzu buna gore secilir.
+            int newPallets = 0;
+            if (catalog != null && catalog.randomRound && catalog.entries != null)
+            {
+                var kindsProbe = new[] { (int)CrateKind.Small, (int)CrateKind.TallSide, (int)CrateKind.Lying, (int)CrateKind.Cardboard };
+                newPallets = EnsureSlots(world, LootLayout.RandomPalletBudget(catalog, kindsProbe));
+            }
+            int slotCount = world.slots != null ? world.slots.Length : 0;
+            var plan = PlanBoxes(catalog, containers, slotCount);
             int placed = 0, sunk = 0;
 
             for (int c = 0; c < containers; c++)
@@ -233,7 +251,8 @@ namespace Bidwars.Loot.EditorTools
                 float need, have; LootLayout.Totals(plan, containers, out need, out have);
                 Debug.LogWarning("[Loot] Kasalar konteynerlere sığmıyor (kasalar arası " + worstGap.ToString("0.00") + " m; gereken " + need.ToString("0") + " m, olan " + have.ToString("0") + " m). Loot Editörü'nde büyük eşyaların turdaki adedini azalt.");
             }
-            int newPallets = EnsureSlots(world, groups);
+            newPallets += EnsureSlots(world, groups);
+            if (catalog != null && catalog.randomRound && real != null && real.Manifest) groups = Mathf.Max(1, world.slots.Length);   // rastgele depo: sahnedeki TUM paletler tur butcesi
             if (world.slots.Length < groups)
             {
                 Debug.LogWarning("[Loot] Sahnede " + world.slots.Length + " palet var, " + groups + " gerekiyor; istif sayısı palete göre kısıldı.");
@@ -249,9 +268,35 @@ namespace Bidwars.Loot.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             var perKind = new int[CrateKinds.Count]; foreach (var k in kinds) perKind[(int)k]++;
+            string fitNote = "";
+            if (catalog != null && catalog.randomRound && real != null && real.Manifest)
+            {
+                var rr = catalog.CreateRules(kinds.Length, 1, System.Array.ConvertAll(kinds, k => (int)k), (int)CrateKind.Cardboard);
+                rr.crateItems = catalog.CrateItemsFromKeys(keys, kinds.Length);
+                long possible = 0; int types = 0;
+                for (int t = 0; t < rr.items.Length; t++)
+                {
+                    int reserved = 0, kind = rr.ManifestKind(rr.items[t]);
+                    if (rr.crateItems != null) for (int c = 0; c < rr.crateItems.Length; c++) if (rr.crateItems[c] == t && (int)kinds[c] == kind) reserved++;
+                    if (reserved == 0 || !rr.items[t].InPool) continue;
+                    types++;
+                    possible += Mathf.Min(rr.items[t].EffectiveMaxCount(), reserved * Mathf.Max(1, rr.items[t].packSize));
+                }
+                long pallets = (long)world.slots.Length * GameRules.StackSize;
+                long perRound = System.Math.Min(System.Math.Min(possible, pallets), GameRules.DepotMaxItems);
+                fitNote = "\nDEPO DOLULUĞU: hedef " + GameRules.DepotMinItems + "–" + GameRules.DepotMaxItems + " eşya/tur. Şu an bir turda en çok " + perRound + " eşya çıkabilir ("
+                    + types + " tür, " + kinds.Length + " kasa, " + world.slots.Length + " palet = " + pallets + " eşya yeri; türlerin üst sınırları toplamı " + possible + "). " + LastPlanNote + ".";
+                if (perRound < GameRules.DepotMinItems)
+                {
+                    string why = new System.Collections.Generic.List<string>(new[] {
+                        pallets < GameRules.DepotMinItems ? "palet yetmiyor (" + System.Math.Ceiling(GameRules.DepotMinItems / (double)GameRules.StackSize) + " palet gerek, sahnede " + world.slots.Length + ": depoya daha fazla raf/palet ekle)" : null,
+                        possible < GameRules.DepotMinItems ? "kasa/tür yetmiyor (konteynerlere daha fazla kasa sığmalı ya da yeni eşya türleri eklenmeli)" : null }).FindAll(x => x != null).Aggregate((x, y) => x + "; " + y);
+                    fitNote += " HEDEFİN ALTINDA: " + why + ".";
+                }
+            }
             string msg = "[Loot] " + placed + " kasa " + containers + " konteynere yerleştirildi (küçük " + perKind[(int)CrateKind.Small] + ", uzun " + perKind[(int)CrateKind.TallSide] +
                 ", yatık " + perKind[(int)CrateKind.Lying] + ", koli " + perKind[(int)CrateKind.Cardboard] + "; " + sunk + " tanesi zemine oturtuldu), " + world.totalGroups + " palet" +
-                (real != null && real.Manifest ? (catalog.randomRound ? ", RASTGELE depo: her turda farklı eşya ve kasalar" : ", turda " + real.items.Sum(r => real.ManifestKind(r) >= 0 ? r.roundCount : 0) + " eşya") : "") + ". Sahne kaydedildi: " + scene.path;
+                (real != null && real.Manifest ? (catalog.randomRound ? ", RASTGELE depo: her turda farklı eşya ve kasalar" : ", turda " + real.items.Sum(r => real.ManifestKind(r) >= 0 ? r.roundCount : 0) + " eşya") : "") + ". Sahne kaydedildi: " + scene.path + fitNote;
             if (verbose) Debug.Log(msg);
             return msg;
         }

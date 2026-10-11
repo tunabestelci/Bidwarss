@@ -40,13 +40,13 @@ public static class RandomDepotTests
         var rules = Make(14, true);
         var caps = new Dictionary<string, int>();
         foreach (var it in rules.items) caps[it.key] = it.EffectiveMaxCount();
-        Check(caps["capsule"] == 20 && caps["coin"] == 20, "small items reach 20");
+        Check(caps["capsule"] == 120 && caps["coin"] == 120, "tiny light items reach 120");
         Check(caps["clock"] == 5 && caps["wardrobe"] == 5, "2 m clock / wardrobe: 5 (same table as the site)");
         Check(caps["mirror"] == 10 && caps["guitar"] == 10, "100+ cm: 10");
-        Check(caps["radio"] == 20 && caps["lamp"] == 20, "small/medium: 20");
+        Check(caps["radio"] == 40 && caps["lamp"] == 20, "35 cm / 3 kg: 40, 60 cm: 20");
         Console.WriteLine("caps: " + string.Join(", ", caps.Select(k => k.Key + "=" + k.Value)));
-        var hand = new ItemRule { key = "x", sizeCm = 200, maxCount = 50 };
-        Check(hand.EffectiveMaxCount() == GameRules.HardMaxCount, "hand limit capped at 20");
+        var hand = new ItemRule { key = "x", sizeCm = 200, maxCount = 500 };
+        Check(hand.EffectiveMaxCount() == GameRules.HardMaxCount, "hand limit capped at HardMaxCount");
 
         var seen = new HashSet<string>(); var countHist = new Dictionary<int, int>(); int lots = 0, total = 0, maxCrates = 0, minCrates = 999;
         var typeFreq = new Dictionary<string, int>();

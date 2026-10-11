@@ -116,7 +116,7 @@ namespace Bidwars.Loot.EditorTools
             if (li.baseValue > 0) e.baseDollars = Mathf.Max(1, Mathf.RoundToInt(li.baseValue));
             if (li.kg > 0) e.kg = li.kg;
             int hand = li.maxCount > 0 ? li.maxCount : li.maxc;
-            if (hand > 0) e.maxCount = Mathf.Clamp(hand, 1, GameRules.HardMaxCount);
+            if (hand > 0 && hand < 20) e.maxCount = Mathf.Clamp(hand, 1, GameRules.HardMaxCount);   // 20 = defterin varsayilani: otomatik birakilir
             e.collector = Mathf.Clamp(li.collectorScore, 0f, 10f);
 
             // siniflar: defterin sinif sirasina gore 7 yuvaya

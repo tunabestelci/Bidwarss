@@ -50,17 +50,34 @@ namespace Bidwarss.Domain
         // Biggest count of this item one round may hold, by size and weight. Always 1..HardMaxCount.
         public int SizeCap()
         {
-            // Same table as DepotSim.maxCount on the Kasa Defteri site.
+            // Big and heavy things stay at 5..20 (as on the Kasa Defteri site); small and light ones may come by the dozens so
+            // that a depot can reach DepotMinItems..DepotMaxItems items.
             int cap = GameRules.HardMaxCount;
             if (sizeCm >= 150) cap = Math.Min(cap, 5);
             else if (sizeCm >= 100) cap = Math.Min(cap, 10);
             else if (sizeCm >= 70) cap = Math.Min(cap, 15);
+            else if (sizeCm >= 45) cap = Math.Min(cap, 20);
+            else if (sizeCm >= 25) cap = Math.Min(cap, 40);
+            else if (sizeCm >= 12) cap = Math.Min(cap, 80);
             if (grams >= 60000) cap = Math.Min(cap, 5);
             else if (grams >= 30000) cap = Math.Min(cap, 10);
             else if (grams >= 15000) cap = Math.Min(cap, 15);
+            else if (grams >= 5000) cap = Math.Min(cap, 20);
+            else if (grams >= 1500) cap = Math.Min(cap, 40);
+            else if (grams >= 300) cap = Math.Min(cap, 80);
             return Math.Max(1, cap);
         }
-        public int EffectiveMaxCount() => maxCount > 0 ? Math.Min(maxCount, GameRules.HardMaxCount) : SizeCap();
+        // Automatic growth of the limit of small/light types (percent, 100 = none). Set by GameRules.AutoFit so that the depot
+        // can reach DepotMinItems with the item types that exist; a hand-set maxCount is never touched.
+        public int capPercent = 100;
+        public bool Boostable => maxCount <= 0 && sizeCm < 100 && grams < 30000;
+        public int EffectiveMaxCount()
+        {
+            if (maxCount > 0) return Math.Min(maxCount, GameRules.HardMaxCount);
+            int cap = SizeCap();
+            if (capPercent > 100 && Boostable) cap = Math.Min(GameRules.HardMaxCount, Math.Max(cap, (int)(cap * (long)capPercent / 100 / 5 * 5)));
+            return cap;
+        }
         // Does this type take part in the random depot at all? (roundCount > 0 or an explicit maxCount switches it on.)
         public bool InPool => roundCount > 0 || maxCount > 0;
         public bool HasConditionTable => condWeights != null && condMin != null && condMax != null;
@@ -78,12 +95,16 @@ namespace Bidwarss.Domain
     public sealed class GameRules
     {
         public const int StackSize = 10;
-        public const int Version = 9;
-        public const int HardMaxCount = 20;
-        public const int MaxItemKinds = 512;
-        public const int MaxCrates = 400;
-        public const int MaxStacks = 200;
-        public const int MaxRoundCount = 50;
+        public const int Version = 10;
+        public const int HardMaxCount = 120;
+        public const int MaxItemKinds = 6000;
+        public const int MaxCrates = 3000;
+        public const int MaxStacks = 600;
+        public const int MaxRoundCount = 120;
+        // Wanted number of items in one random depot. The round draws its total in this range; what the scene cannot hold
+        // (pallets: 10 items each, crates in the containers, the per-item limits) is cut off, Loot > 2 prints what is possible.
+        public const int DepotMinItems = 3500;
+        public const int DepotMaxItems = 4500;
         public const int MaxSelectionWeight = 1000000;
         public int crateCount = 10;
         public int totalGroups = 12;
@@ -286,13 +307,33 @@ namespace Bidwarss.Domain
             if (crateItems != null) { s.Append("|I"); foreach (int t in crateItems) s.Append(',').Append(t); }
             foreach (var i in items)
             {
-                s.Append('|').Append(i.key).Append("|n").Append(i.roundCount).Append("|x").Append(i.maxCount).Append("|z").Append(i.sizeCm).Append("|w").Append(i.grams).Append('|').Append(i.baseDollars).Append('|').Append(i.selectionWeight).Append('|').Append(i.maxGroups).Append('|').Append(i.crateMask).Append('|').Append(i.packSize);
+                s.Append('|').Append(i.key).Append("|n").Append(i.roundCount).Append("|x").Append(i.maxCount).Append("|z").Append(i.sizeCm).Append("|b").Append(i.capPercent).Append("|w").Append(i.grams).Append('|').Append(i.baseDollars).Append('|').Append(i.selectionWeight).Append('|').Append(i.maxGroups).Append('|').Append(i.crateMask).Append('|').Append(i.packSize);
                 if (i.HasConditionTable) for (int c = 0; c < 7; c++) s.Append("|C").Append(i.condWeights[c]).Append(',').Append(i.condMin[c]).Append(',').Append(i.condMax[c]);
             }
             s.Append("|P").Append(packedKind);
             if (crateKinds != null) { s.Append("|K"); foreach (int k in crateKinds) s.Append(',').Append(k); }
             foreach (var c in conditions) s.Append('|').Append(c.minimumPercent).Append('|').Append(c.maximumPercent).Append('|').Append(c.weight);
             using (var hash = SHA256.Create()) return BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(s.ToString()))).Replace("-", "").ToLowerInvariant();
+        }
+
+        // Auto-adjust to the item types that exist: if the types together cannot reach DepotMinItems (with some room for the
+        // crates and pallets), the limits of the small/light types grow (up to 6x, never above HardMaxCount). Big and heavy
+        // types and hand-set limits stay as they are. Call after items/crateKinds are set; the result is deterministic.
+        public void AutoFit()
+        {
+            if (items == null) return;
+            long fixedSum = 0, boostSum = 0;
+            foreach (var i in items)
+            {
+                if (i == null) continue;
+                i.capPercent = 100;
+                if (!i.InPool || !IsEligible(i) || (crateKinds != null && ManifestKind(i) < 0)) continue;
+                if (i.Boostable) boostSum += i.SizeCap(); else fixedSum += i.EffectiveMaxCount();
+            }
+            long want = DepotMinItems * 115L / 100;
+            if (boostSum == 0 || fixedSum + boostSum >= want) return;
+            int percent = (int)Math.Min(600L, (want - fixedSum) * 100 / boostSum);
+            foreach (var i in items) if (i != null && i.Boostable) i.capPercent = Math.Max(100, percent);
         }
 
         public int Price(int kind, ItemCondition condition, int percent)
