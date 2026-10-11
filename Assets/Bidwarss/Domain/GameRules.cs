@@ -70,6 +70,9 @@ namespace Bidwarss.Domain
         // Automatic growth of the limit of small/light types (percent, 100 = none). Set by GameRules.AutoFit so that the depot
         // can reach DepotMinItems with the item types that exist; a hand-set maxCount is never touched.
         public int capPercent = 100;
+        // Items one pallet takes in the random depot: small things are packed 2x2 per cell (40 per pallet), medium 2 per cell (20),
+        // big ones one per cell (10). 10 = the classic pallet.
+        public int PalletCap() => sizeCm <= 45 ? 40 : sizeCm <= 70 ? 20 : GameRules.StackSize;
         public bool Boostable => maxCount <= 0 && sizeCm < 100 && grams < 30000;
         public int EffectiveMaxCount()
         {
@@ -96,11 +99,11 @@ namespace Bidwarss.Domain
     {
         public const int StackSize = 10;
         public const int Version = 10;
-        public const int HardMaxCount = 120;
+        public const int HardMaxCount = 200;
         public const int MaxItemKinds = 6000;
         public const int MaxCrates = 3000;
         public const int MaxStacks = 600;
-        public const int MaxRoundCount = 120;
+        public const int MaxRoundCount = 200;
         // Wanted number of items in one random depot. The round draws its total in this range; what the scene cannot hold
         // (pallets: 10 items each, crates in the containers, the per-item limits) is cut off, Loot > 2 prints what is possible.
         public const int DepotMinItems = 3500;
@@ -330,7 +333,7 @@ namespace Bidwarss.Domain
                 if (!i.InPool || !IsEligible(i) || (crateKinds != null && ManifestKind(i) < 0)) continue;
                 if (i.Boostable) boostSum += i.SizeCap(); else fixedSum += i.EffectiveMaxCount();
             }
-            long want = DepotMinItems * 115L / 100;
+            long want = DepotMinItems * 120L / 100;
             if (boostSum == 0 || fixedSum + boostSum >= want) return;
             int percent = (int)Math.Min(600L, (want - fixedSum) * 100 / boostSum);
             foreach (var i in items) if (i != null && i.Boostable) i.capPercent = Math.Max(100, percent);

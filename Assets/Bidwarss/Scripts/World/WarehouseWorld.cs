@@ -24,6 +24,9 @@ namespace Bidwarss
         public TextMesh[] stackLabels;
         [Tooltip("Her kasada hangi eşya var (katalog anahtarı; Loot > 2 doldurur). Kasalar bu içeriğe göre boyutlanıp dizildi.")]
         public string[] crateItemKeys;
+        [Tooltip("Ust uste konan kasalar: boxSupport[i] = i. kasanin ustunde durdugu kasa (yoksa -1). Loot > 2 doldurur; alttaki kasa bos olsa da ustteki doluysa gorunur kalir.")]
+        public int[] boxSupport;
+        bool[] holdsTop;
         [Range(1,600)] public int totalGroups = 12;
         [Tooltip("Sahnede kasa animasyonu yoksa bir kasayı açmak için E basılı tutma süresi (animasyonlu kasalarda kasanın kendi süresi geçerli: vida başına / bant kesme).")]
         [Range(.5f,8)] public float openSeconds = 3.4f;
@@ -376,13 +379,25 @@ namespace Bidwarss
             return new Vector3(Mathf.Max(.05f,s.x),Mathf.Max(.05f,s.y),Mathf.Max(.05f,s.z));
         }
         // Two rows of five objects. Rotation follows the pallet, independently of its model scale.
+        // A pallet has ten cells. Small things share a cell (2 or 2x2 per cell, pallet capacity 20 / 40): cell = index % 10,
+        // the sub-position inside the cell = index / 10. Big things use one cell each.
         public Vector3 StackPosition(int stack,int index)
         {
             var layout=slots[stack].GetComponent<StackLayout>();
-            return layout!=null?layout.Center(index):slots[stack].position+slots[stack].rotation*new Vector3((index%2-.5f)*.47f,.30f,(index/2-2)*.40f);
+            int cell=index%10,sub=index/10;
+            int cap=Engine!=null&&stack<Engine.StackCount?Engine.StackCapacity(stack):GameRules.StackSize;
+            int subs=(cap+9)/10;
+            Vector3 center=layout!=null?layout.Center(cell):slots[stack].position+slots[stack].rotation*new Vector3((cell%2-.5f)*.47f,.30f,(cell/2-2)*.40f);
+            if(subs>1)
+            {
+                Quaternion r=layout!=null?layout.Rotation(cell):slots[stack].rotation;
+                Vector3 offset=subs==2?new Vector3((sub==0?-1:1)*.11f,0,0):new Vector3(((sub&1)==0?-1:1)*.11f,0,((sub&2)==0?-1:1)*.085f);
+                center+=r*offset+Vector3.down*.07f;
+            }
+            return center;
         }
         Quaternion StackRotation(int stack,int index)
-        {var layout=slots[stack].GetComponent<StackLayout>();return layout!=null?layout.Rotation(index):slots[stack].rotation;}
+        {var layout=slots[stack].GetComponent<StackLayout>();return layout!=null?layout.Rotation(index%10):slots[stack].rotation;}
         ItemState ToState(RoundItem item,Vector3 position,float yaw=0,byte pose=0)
         {
             bool sealedItem=item.location==ItemLocation.Sealed;
@@ -533,12 +548,19 @@ namespace Bidwarss
             for(int i=0;i<Crates.Count&&i<knownOpen.Length;i++)knownOpen[i]=Crates[i].opened;
             // Random depot: crates that hold nothing this round are hidden (their stage resets itself when it is shown again).
             if(boxes!=null)
+            {
+                if(holdsTop==null||holdsTop.Length!=boxes.Length)holdsTop=new bool[boxes.Length];
+                System.Array.Clear(holdsTop,0,holdsTop.Length);
+                if(boxSupport!=null&&boxSupport.Length==boxes.Length)
+                    for(int j=0;j<boxes.Length&&j<Crates.Count;j++)
+                        if(boxSupport[j]>=0&&boxSupport[j]<boxes.Length&&!Crates[j].inactive)holdsTop[boxSupport[j]]=true;
                 for(int i=0;i<boxes.Length&&i<Crates.Count;i++)
                 {
                     if(boxes[i]==null)continue;
-                    bool on=!Crates[i].inactive;
+                    bool on=!Crates[i].inactive||holdsTop[i];
                     if(boxes[i].gameObject.activeSelf!=on)boxes[i].gameObject.SetActive(on);
                 }
+            }
             for(int i=0;i<slots.Length;i++)
             {
                 if(slots[i]==null)continue;
@@ -581,7 +603,7 @@ namespace Bidwarss
                     else {pos=owner.transform.position+Vector3.up*1.04f+owner.transform.forward*.54f;rot=owner.transform.rotation;}
                 }
                 view.SetHighlight(ScannerActive&&GuideKind>=0&&item.kind==GuideKind&&item.location==ItemLocation.Loose?1f:0f);
-                view.UpdateState(item,pos,rot,item.location==ItemLocation.Stacked&&slots[item.slot].GetComponent<StackLayout>()!=null?.85f:carryScale);
+                view.UpdateState(item,pos,rot,item.location==ItemLocation.Stacked&&slots[item.slot].GetComponent<StackLayout>()!=null?(item.slot<Stacks.Count&&Stacks[item.slot].Cap>GameRules.StackSize?.45f:.85f):carryScale);
             }
         }
     }

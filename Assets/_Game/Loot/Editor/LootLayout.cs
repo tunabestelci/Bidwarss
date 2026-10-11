@@ -14,9 +14,10 @@ namespace Bidwars.Loot.EditorTools
     public static class LootLayout
     {
         public const float RowStart = 3.3f, RowEnd = 32.1f;   // konteyner yerel x: siranin kullanilabilir boyu (kapi -X tarafinda)
-        public const float MinGap = 0.3f, NiceGap = 1.1f, PairGap = 0.1f;
+        // Kasalar bitisik ve duzgun dizilir (el ile en iyi alan kullanimi gibi): aralar 4-6 cm, egiklik yok.
+        public const float MinGap = 0.04f, NiceGap = 0.06f, PairGap = 0.03f;
         public static readonly Vector3 MinInterior = new Vector3(0.26f, 0.2f, 0.24f);   // CrateStage.ChooseShape ile ayni
-        public const float Jitter = 12f;                       // kucuk kasa ve koliler hafif egik durur (derece)
+        public const float Jitter = 0f;                        // kasalar duz durur (derece)
 
         public class Box
         {
@@ -29,6 +30,8 @@ namespace Bidwars.Loot.EditorTools
             public float[] lo = { -0.6f, -0.6f }, hi = { 0.6f, 0.6f };
             public float Length(int row) { return hi[row] - lo[row]; }
             public int container = -1, row;
+            public Box under;           // ustunde durdugu kasa (null = yerde)
+            public int tier;            // 0 = yerde, 1 = bir kasanin ustunde
             public float x;             // sonuc: pivot'un konteyner yerel x'i
         }
 
@@ -88,19 +91,47 @@ namespace Bidwars.Loot.EditorTools
             var probe = cat.CreateRules(crateKinds.Length, 1, crateKinds, (int)CrateKind.Cardboard);
             int pallets = 0;
             foreach (var r in probe.items)
-                if (r.InPool && probe.ManifestKind(r) >= 0) pallets += (r.EffectiveMaxCount() + GameRules.StackSize - 1) / GameRules.StackSize;
-            int wished = (GameRules.DepotMaxItems + GameRules.StackSize - 1) / GameRules.StackSize;
-            return Mathf.Clamp(Mathf.Min(wished, pallets), 24, GameRules.MaxStacks);
+                if (r.InPool && probe.ManifestKind(r) >= 0) pallets += (r.EffectiveMaxCount() + r.PalletCap() - 1) / r.PalletCap();
+            return Mathf.Clamp(pallets, 24, GameRules.MaxStacks);
         }
 
         /// <summary>Kasalarin toplam isteyecegi palet sayisi (her esya turu icin kasalarin toplam kapasitesi / 10, yukari yuvarlanir).</summary>
-        public static int PalletsOf(List<Box> boxes)
+        public static int PalletsOf(List<Box> boxes, GameRules rules)
         {
-            var perKey = new Dictionary<string, int>();
-            foreach (var b in boxes) { string k = b.key ?? "?"; int n; perKey.TryGetValue(k, out n); perKey[k] = n + Mathf.Max(1, b.count); }
+            var perKey = new Dictionary<string, int>(); var capOf = new Dictionary<string, int>();
+            foreach (var b in boxes)
+            {
+                string k = b.key ?? "?"; int n; perKey.TryGetValue(k, out n); perKey[k] = n + Mathf.Max(1, b.count);
+                capOf[k] = rules != null && b.item >= 0 && b.item < rules.items.Length ? rules.items[b.item].PalletCap() : GameRules.StackSize;
+            }
             int pallets = 0;
-            foreach (var kv in perKey) pallets += (kv.Value + GameRules.StackSize - 1) / GameRules.StackSize;
+            foreach (var kv in perKey) pallets += (kv.Value + capOf[kv.Key] - 1) / capOf[kv.Key];
             return pallets;
+        }
+
+        /// <summary>Yer biterse (toplam boy konteyner sirasini asarsa) koliler yatik kasalarin USTUNE konur (yatik kasa yandan acilir,
+        /// ustu bos kalir; koli ustte bant kesimi icin goz hizasinda). Alttaki kasadan kisa olmayan en kucuk kasa secilir.</summary>
+        public static void StackPlan(List<Box> boxes, float capacity)
+        {
+            foreach (var b in boxes) { b.under = null; b.tier = 0; }
+            float need = 0f; foreach (var b in boxes) need += b.Length(0) + MinGap;
+            if (need <= capacity * 0.97f) return;
+            var bases = boxes.Where(b => b.kind == CrateKind.Lying).OrderBy(b => Mathf.Max(b.Length(0), b.Length(1))).ToList();
+            var taken = new HashSet<Box>();
+            foreach (var top in boxes.Where(b => b.kind == CrateKind.Cardboard).OrderByDescending(b => Mathf.Max(b.Length(0), b.Length(1))).ToList())
+            {
+                if (need <= capacity * 0.97f) break;
+                float len = Mathf.Max(top.Length(0), top.Length(1));
+                Box best = null;
+                foreach (var bs in bases)
+                {
+                    if (taken.Contains(bs)) continue;
+                    if (Mathf.Min(bs.Length(0), bs.Length(1)) + 0.02f >= len) { best = bs; break; }
+                }
+                if (best == null) continue;
+                taken.Add(best); top.under = best; top.tier = 1;
+                need -= top.Length(0) + MinGap;
+            }
         }
 
         /// <summary>Olcmeden tahmini kaplama (koli icin kesin: ParcelSize metre cinsinden dis olcu).</summary>
@@ -115,7 +146,7 @@ namespace Bidwars.Loot.EditorTools
             else
             {
                 Vector3 inner = CratePacking.CrateInterior(b.cell, b.count);
-                float a = Mathf.Max(inner.x, MinInterior.x) * 1.12f + 0.1f, w = Mathf.Max(inner.z, MinInterior.z) * 1.12f + 0.1f;
+                float a = Mathf.Max(inner.x, MinInterior.x) * 1.05f + 0.06f, w = Mathf.Max(inner.z, MinInterior.z) * 1.05f + 0.06f;
                 half = Mathf.Max(Mathf.Max(a, w), Turned(a, w)) * 0.5f;
             }
             for (int r = 0; r < 2; r++) { b.lo[r] = -half; b.hi[r] = half; }
@@ -132,10 +163,11 @@ namespace Bidwars.Loot.EditorTools
         public static float Arrange(List<Box> boxes, int containers)
         {
             int rows = containers * 2;
-            // birimler: ahsap kasa tek, koliler ikiser (benzer boydakiler yan yana)
+            StackPlan(boxes, containers * 2 * (RowEnd - RowStart));
+            // birimler: ahsap kasa tek, koliler ikiser (benzer boydakiler yan yana); ustte duranlar yere yer kaplamaz
             var units = new List<Unit>();
             foreach (var b in boxes.Where(b => b.kind != CrateKind.Cardboard)) units.Add(new Unit { kind = b.kind, boxes = { b } });
-            var parcels = boxes.Where(b => b.kind == CrateKind.Cardboard).OrderByDescending(b => b.Length(0)).ThenBy(b => b.key, System.StringComparer.Ordinal).ToList();
+            var parcels = boxes.Where(b => b.kind == CrateKind.Cardboard && b.under == null).OrderByDescending(b => b.Length(0)).ThenBy(b => b.key, System.StringComparer.Ordinal).ToList();
             for (int i = 0; i < parcels.Count; i += 2)
             {
                 var u = new Unit { kind = CrateKind.Cardboard };
@@ -195,6 +227,14 @@ namespace Bidwars.Loot.EditorTools
                     cursor += gap;
                 }
             }
+            // ustteki koliler: altlarindaki kasanin tam ustunde
+            foreach (var top in boxes.Where(b => b.under != null))
+            {
+                var bs = top.under;
+                top.container = bs.container; top.row = bs.row;
+                float baseCenter = bs.x + (bs.lo[bs.row] + bs.hi[bs.row]) * 0.5f, topCenter = (top.lo[bs.row] + top.hi[bs.row]) * 0.5f;
+                top.x = baseCenter - topCenter;
+            }
             boxes.Sort((a, b) => a.container != b.container ? a.container.CompareTo(b.container) : a.row != b.row ? a.row.CompareTo(b.row) : a.x.CompareTo(b.x));
             return worst == float.MaxValue ? NiceGap : worst;
         }
@@ -202,7 +242,7 @@ namespace Bidwars.Loot.EditorTools
         /// <summary>Tum siralarin toplam boyu ve kasalarin toplam kapladigi boy (m).</summary>
         public static void Totals(List<Box> boxes, int containers, out float need, out float have)
         {
-            need = 0f; foreach (var b in boxes) need += b.Length(0) + MinGap;
+            need = 0f; foreach (var b in boxes) if (b.under == null) need += b.Length(0) + MinGap;
             have = containers * 2 * (RowEnd - RowStart);
         }
 

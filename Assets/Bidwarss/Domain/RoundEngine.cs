@@ -225,7 +225,7 @@ namespace Bidwarss.Domain
         }
 
         // Counts a random round may take: mostly 5/10/15/20 (a lot of 20 is a full two-pallet shelf), sometimes an odd lot.
-        public static readonly int[] LotSizes = { 5, 10, 15, 20, 30, 40, 60, 80, 100, 120 };
+        public static readonly int[] LotSizes = { 5, 10, 15, 20, 30, 40, 60, 80, 100, 120, 150, 200 };
 
         // Random depot round. Everything is drawn here, nothing depends on the crate numbers:
         //   1. a pallet budget (half of the pallet slots up to all of them),
@@ -265,7 +265,7 @@ namespace Bidwarss.Domain
             // round simply fills 90-100% of what it has.
             int budget = Math.Max(1, rules.totalGroups);
             long capacity = 0; foreach (int t in candidates) capacity += cap[t];
-            int possible = (int)Math.Min(Math.Min(capacity, (long)budget * GameRules.StackSize), GameRules.DepotMaxItems);
+            int possible = (int)Math.Min(capacity, GameRules.DepotMaxItems);
             int lowest = possible >= GameRules.DepotMinItems ? GameRules.DepotMinItems : Math.Max(1, (9 * possible + 9) / 10);
             int target = lowest + random.Range(possible - lowest + 1);
             var counts = ChooseCounts(rules, cap, candidates, budget, target, ref random);
@@ -282,8 +282,9 @@ namespace Bidwarss.Domain
                     items.Add(new RoundItem { kind = kind, condition = (ItemCondition)condition, dollars = dollars, preferredKind = rules.ManifestKind(rules.items[kind]) });
                     TotalDollars = checked(TotalDollars + dollars);
                 }
-                for (int left = chosenCount[k]; left > 0; left -= GameRules.StackSize)
-                    stackPairs.Add(new KeyValuePair<int, int>(kind, Math.Min(GameRules.StackSize, left)));
+                int palletCap = rules.items[kind].PalletCap();
+                for (int left = chosenCount[k]; left > 0; left -= palletCap)
+                    stackPairs.Add(new KeyValuePair<int, int>(kind, Math.Min(palletCap, left)));
             }
             random.Shuffle(stackPairs);
             foreach (var p in stackPairs) { stackKindList.Add(p.Key); capList.Add(p.Value); }
@@ -311,7 +312,7 @@ namespace Bidwarss.Domain
         }
 
         // Weights of the lot sizes 5/10/15/20 (the same numbers as the Kasa Defteri site).
-        static readonly int[] LotWeights = { 3, 4, 3, 2, 2, 2, 1, 1, 1, 1 };
+        static readonly int[] LotWeights = { 3, 4, 3, 2, 2, 2, 1, 1, 1, 1, 1, 1 };
 
         // How many of an item one round gets, 1..limit: mostly a full lot (5/10/15/20), now and then an odd lot of 3..limit.
         // Same rule as DepotSim.pickCount on the site.
@@ -331,7 +332,7 @@ namespace Bidwarss.Domain
             return limit;
         }
 
-        static int PalletsFor(int count) { return (count + GameRules.StackSize - 1) / GameRules.StackSize; }
+        static int PalletsFor(int count, int palletCap) { return (count + palletCap - 1) / palletCap; }
 
         // Next bigger count of a type: the next lot size, finally the type's own limit.
         static int NextLot(int count, int limit)
@@ -354,10 +355,11 @@ namespace Bidwarss.Domain
                 long ticket = random.RangeLong(weight); int at = 0;
                 for (; at < pool.Count - 1; at++) { ticket -= Math.Max(1, rules.items[pool[at]].selectionWeight); if (ticket < 0) break; }
                 int kind = pool[at]; pool.RemoveAt(at);
-                int n = DrawLot(ref random, Math.Min(limits[kind], left * GameRules.StackSize));
+                int palletCap = rules.items[kind].PalletCap();
+                int n = DrawLot(ref random, Math.Min(limits[kind], left * palletCap));
                 n = Math.Min(n, Math.Max(3, target - total));
                 counts[kind] = n; total += n;
-                left -= PalletsFor(n);
+                left -= PalletsFor(n, palletCap);
             }
             while (left >= 0 && total < target)
             {
@@ -365,11 +367,13 @@ namespace Bidwarss.Domain
                 for (int i = 0; i < counts.Length; i++)
                 {
                     int next = NextLot(counts[i], limits[i]);
-                    if (counts[i] > 0 && next > 0 && PalletsFor(next) - PalletsFor(counts[i]) <= left && total + (next - counts[i]) <= GameRules.DepotMaxItems) growable.Add(i);
+                    int pc = rules.items[i].PalletCap();
+                    if (counts[i] > 0 && next > 0 && PalletsFor(next, pc) - PalletsFor(counts[i], pc) <= left && total + (next - counts[i]) <= GameRules.DepotMaxItems) growable.Add(i);
                 }
                 if (growable.Count == 0) break;
                 int pick = growable[random.Range(growable.Count)], grown = NextLot(counts[pick], limits[pick]);
-                left -= PalletsFor(grown) - PalletsFor(counts[pick]); total += grown - counts[pick]; counts[pick] = grown;
+                int pcp = rules.items[pick].PalletCap();
+                left -= PalletsFor(grown, pcp) - PalletsFor(counts[pick], pcp); total += grown - counts[pick]; counts[pick] = grown;
             }
             return counts;
         }

@@ -67,13 +67,18 @@ namespace Bidwars.Loot.EditorTools
                 if (catalog.randomRound)
                 {
                     float scale = 1f;
-                    for (int step = 0; step < 60; step++, scale *= 0.92f)
+                    var kindsProbe = new[] { (int)CrateKind.Small, (int)CrateKind.TallSide, (int)CrateKind.Lying, (int)CrateKind.Cardboard };
+                    var probeRules = catalog.CreateRules(4, 1, kindsProbe, (int)CrateKind.Cardboard);
+                    for (int step = 0; step < 80; step++, scale *= 0.94f)
                     {
                         boxes = LootLayout.Boxes(catalog, scale);
-                        float need, have; LootLayout.Totals(boxes, containers, out need, out have);
-                        bool fitsContainers = need <= have * 0.95f;
-                        bool fitsPallets = slots <= 0 || LootLayout.PalletsOf(boxes) <= Mathf.CeilToInt(slots * 1.15f);
-                        LastPlanNote = "ayrilan kasa havuzu %" + Mathf.RoundToInt(scale * 100) + " (" + boxes.Count + " kasa, konteyner doluluk %" + Mathf.RoundToInt(need / Mathf.Max(1f, have) * 100f) + ", " + LootLayout.PalletsOf(boxes) + " palet / sahnede " + slots + ")";
+                        float need, have; have = containers * 2 * (LootLayout.RowEnd - LootLayout.RowStart);
+                        LootLayout.StackPlan(boxes, have);
+                        LootLayout.Totals(boxes, containers, out need, out have);
+                        int stacked = boxes.Count(b => b.under != null);
+                        bool fitsContainers = need <= have * 0.97f;
+                        bool fitsPallets = slots <= 0 || LootLayout.PalletsOf(boxes, probeRules) <= Mathf.CeilToInt(slots * 1.1f);
+                        LastPlanNote = "ayrilan kasa havuzu %" + Mathf.RoundToInt(scale * 100) + " (" + boxes.Count + " kasa, " + stacked + " tanesi baska kasanin ustunde, konteyner doluluk %" + Mathf.RoundToInt(need / Mathf.Max(1f, have) * 100f) + ", " + LootLayout.PalletsOf(boxes, probeRules) + " palet gerekir / sahnede " + slots + ")";
                         if (fitsContainers && fitsPallets) break;
                     }
                     if (scale < 0.999f) Debug.LogWarning("[Loot] Rastgele depo: " + LastPlanNote + ". Konteyner ya da palet sayısı arttıkça havuz büyür.");
@@ -192,9 +197,13 @@ namespace Bidwars.Loot.EditorTools
             var boxes = new Transform[plan.Count];
             var kinds = new CrateKind[plan.Count];
             var keys = new string[plan.Count];
+            var supports = new int[plan.Count];
+            for (int i = 0; i < supports.Length; i++) supports[i] = -1;
+            for (int pass = 0; pass < 2; pass++)
             for (int id = 0; id < plan.Count; id++)
             {
                 var p = plan[id];
+                if ((p.tier > 0 ? 1 : 0) != pass) continue;   // once yerdekiler, sonra ustte duranlar
                 CrateKind kind = p.kind;
                 kinds[id] = kind; keys[id] = p.key;
                 Transform container = p.container >= 0 && p.container < containers ? world.crates[p.container] : null;
@@ -211,6 +220,13 @@ namespace Bidwars.Loot.EditorTools
                 // zemin: konteynerin icinden asagi raycast, sonra kasanin en alt noktasini zemine oturt
                 Physics.SyncTransforms();
                 float floorY = FloorHeight(container, go.transform.position, go);
+                int underId = p.under != null ? plan.IndexOf(p.under) : -1;
+                if (underId >= 0 && boxes[underId] != null)
+                {
+                    var underStage = boxes[underId].GetComponent<CrateStage>();
+                    floorY = BodyBounds(boxes[underId].gameObject, underStage).max.y;   // alttaki kasanin ustu
+                }
+                supports[id] = underId;
                 Bounds b = BodyBounds(go, stage);
                 float shift = floorY + 0.002f - b.min.y;
                 if (Mathf.Abs(shift) > 0.001f) sunk++;
@@ -239,6 +255,7 @@ namespace Bidwars.Loot.EditorTools
             world.boxes = boxes;
             world.crateKinds = kinds;
             world.crateItemKeys = keys.Any(k => k != null) ? keys : null;
+            world.boxSupport = supports;
             int parcels = 0; foreach (var k in kinds) if (k == CrateKind.Cardboard) parcels++;
             var probe = new GameRules { crateCount = kinds.Length, crateKinds = System.Array.ConvertAll(kinds, k => (int)k), packedKind = (int)CrateKind.Cardboard };
             int groups = Mathf.Max(1, (boxes.Length - parcels) / GameRules.StackSize + probe.PackedGroups);
@@ -273,25 +290,27 @@ namespace Bidwars.Loot.EditorTools
             {
                 var rr = catalog.CreateRules(kinds.Length, 1, System.Array.ConvertAll(kinds, k => (int)k), (int)CrateKind.Cardboard);
                 rr.crateItems = catalog.CrateItemsFromKeys(keys, kinds.Length);
-                long possible = 0; int types = 0;
+                long possible = 0, palletsNeeded = 0; int types = 0;
                 for (int t = 0; t < rr.items.Length; t++)
                 {
                     int reserved = 0, kind = rr.ManifestKind(rr.items[t]);
                     if (rr.crateItems != null) for (int c = 0; c < rr.crateItems.Length; c++) if (rr.crateItems[c] == t && (int)kinds[c] == kind) reserved++;
                     if (reserved == 0 || !rr.items[t].InPool) continue;
                     types++;
-                    possible += Mathf.Min(rr.items[t].EffectiveMaxCount(), reserved * Mathf.Max(1, rr.items[t].packSize));
+                    int cap = Mathf.Min(rr.items[t].EffectiveMaxCount(), reserved * Mathf.Max(1, rr.items[t].packSize));
+                    possible += cap;
+                    palletsNeeded += (cap + rr.items[t].PalletCap() - 1) / rr.items[t].PalletCap();
                 }
-                long pallets = (long)world.slots.Length * GameRules.StackSize;
-                long perRound = System.Math.Min(System.Math.Min(possible, pallets), GameRules.DepotMaxItems);
-                fitNote = "\nDEPO DOLULUĞU: hedef " + GameRules.DepotMinItems + "–" + GameRules.DepotMaxItems + " eşya/tur. Şu an bir turda en çok " + perRound + " eşya çıkabilir ("
-                    + types + " tür, " + kinds.Length + " kasa, " + world.slots.Length + " palet = " + pallets + " eşya yeri; türlerin üst sınırları toplamı " + possible + "). " + LastPlanNote + ".";
+                long slotCount = world.slots.Length;
+                long perRound = System.Math.Min(palletsNeeded <= slotCount ? possible : possible * slotCount / System.Math.Max(1, palletsNeeded), GameRules.DepotMaxItems);
+                fitNote = "\nDEPO DOLULUĞU: hedef " + GameRules.DepotMinItems + "–" + GameRules.DepotMaxItems + " eşya/tur. Şu an bir turda en çok ~" + perRound + " eşya çıkabilir ("
+                    + types + " tür, " + kinds.Length + " kasa, türlerin üst sınırları toplamı " + possible + ", bunun için " + palletsNeeded + " palet gerekir, sahnede " + slotCount + "). " + LastPlanNote + ".";
                 if (perRound < GameRules.DepotMinItems)
                 {
-                    string why = new System.Collections.Generic.List<string>(new[] {
-                        pallets < GameRules.DepotMinItems ? "palet yetmiyor (" + System.Math.Ceiling(GameRules.DepotMinItems / (double)GameRules.StackSize) + " palet gerek, sahnede " + world.slots.Length + ": depoya daha fazla raf/palet ekle)" : null,
-                        possible < GameRules.DepotMinItems ? "kasa/tür yetmiyor (konteynerlere daha fazla kasa sığmalı ya da yeni eşya türleri eklenmeli)" : null }).FindAll(x => x != null).Aggregate((x, y) => x + "; " + y);
-                    fitNote += " HEDEFİN ALTINDA: " + why + ".";
+                    var reasons = new System.Collections.Generic.List<string>();
+                    if (palletsNeeded > slotCount) reasons.Add("palet yetmiyor (" + palletsNeeded + " gerek, sahnede " + slotCount + ": depoya daha fazla raf/palet ekle)");
+                    if (possible < GameRules.DepotMinItems) reasons.Add("kasa/tür yetmiyor (konteynerlere daha fazla kasa sığmalı ya da yeni eşya türleri eklenmeli)");
+                    fitNote += " HEDEFİN ALTINDA: " + string.Join("; ", reasons.ToArray()) + ".";
                 }
             }
             string msg = "[Loot] " + placed + " kasa " + containers + " konteynere yerleştirildi (küçük " + perKind[(int)CrateKind.Small] + ", uzun " + perKind[(int)CrateKind.TallSide] +
@@ -443,7 +462,7 @@ namespace Bidwars.Loot.EditorTools
                                     float pad = across * 0.5f * Mathf.Sin(LootLayout.Jitter * Mathf.Deg2Rad);
                                     lo -= pad; hi += pad;
                                 }
-                                m[row * 2] = lo - 0.03f; m[row * 2 + 1] = hi + 0.03f;
+                                m[row * 2] = lo - 0.01f; m[row * 2 + 1] = hi + 0.01f;
                             }
                             go.transform.localScale = baseScale;
                             cache[kind + key] = m;

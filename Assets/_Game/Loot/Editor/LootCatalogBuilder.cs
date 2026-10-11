@@ -150,6 +150,7 @@ namespace Bidwars.Loot.EditorTools
                 if (kind < 0) continue;
                 var def = DefOf(e);
                 int want = def != null ? def.pack : (kind == (int)CrateKind.Cardboard ? 5 : 3);
+                if (kind == (int)CrateKind.Cardboard) want = 10;   // koli: koli boyuna sigdigi kadar (MaxPerCrate sinirlar)
                 if (kind == (int)CrateKind.Small) want = SmallCratePack(e);   // ahsap kucuk kasa: kucuk esyadan birkac tane (3500-4500 esya icin)
                 e.packSize = Mathf.Clamp(Mathf.Min(want, LootPools.MaxPerCrate(e, (CrateKind)kind)), 1, 10);
                 totalItems += e.roundCount;
@@ -166,12 +167,12 @@ namespace Bidwars.Loot.EditorTools
 
         const int SizeVersion = 11;
 
-        // Kucuk ahsap kasada bir kasaya sigan adet: kucuk esya 6, orta 4, buyukce 2, boy boyu 1; kasa 60 kg'dan agir olmasin.
+        // Kucuk ahsap kasada bir kasaya sigan adet: kucuk esya 10, orta 6, buyukce 3, boy boyu 1; kasa 80 kg'dan agir olmasin.
         static int SmallCratePack(ItemCatalog.Entry e)
         {
             float longest = Mathf.Max(e.realSize.x, Mathf.Max(e.realSize.y, e.realSize.z));
-            int n = longest <= .45f ? 6 : longest <= .7f ? 4 : longest <= 1f ? 2 : 1;
-            if (e.kg > 0f) n = Mathf.Min(n, Mathf.Max(1, Mathf.FloorToInt(60f / e.kg)));
+            int n = longest <= .45f ? 10 : longest <= .7f ? 6 : longest <= 1f ? 3 : 1;
+            if (e.kg > 0f) n = Mathf.Min(n, Mathf.Max(1, Mathf.FloorToInt(80f / e.kg)));
             return Mathf.Max(1, n);
         }
 
