@@ -79,12 +79,16 @@ namespace Bidwarss
                 // Only a visual prefab belongs here; networking and interaction live on the parent.
                 foreach(var collider in custom.GetComponentsInChildren<Collider>())collider.enabled=false;
                 foreach(var body in custom.GetComponentsInChildren<Rigidbody>()){body.isKinematic=true;body.detectCollisions=false;}
-                var rs=custom.GetComponentsInChildren<Renderer>();
+                var rs=System.Array.FindAll(custom.GetComponentsInChildren<Renderer>(),x=>x is MeshRenderer||x is SkinnedMeshRenderer);
                 if(rs.Length>0)
                 {
                     var bounds=rs[0].bounds;foreach(var r in rs)bounds.Encapsulate(r.bounds);
                     Vector3 size=bounds.size;
-                    float scale=Mathf.Min(.42f/Mathf.Max(size.x,.001f),.38f/Mathf.Max(size.y,.001f),.32f/Mathf.Max(size.z,.001f));
+                    // Carried / stacked display box: small items fill the standard box, big ones (arcade, fridge, motorbike) get a
+                    // larger one so they still read as big next to a pistol (up to 1.5x; the loose item is always at real size).
+                    float longestReal=Mathf.Max(entry.realSize.x,Mathf.Max(entry.realSize.y,entry.realSize.z));
+                    float grow=Mathf.Clamp(Mathf.Sqrt(longestReal/.6f),1f,1.5f);
+                    float scale=Mathf.Min(.42f/Mathf.Max(size.x,.001f),.38f/Mathf.Max(size.y,.001f),.32f/Mathf.Max(size.z,.001f))*grow;
                     Vector3 center=custom.transform.InverseTransformPoint(bounds.center);
                     custom.transform.localScale*=scale;
                     custom.transform.localPosition-=custom.transform.TransformVector(center);

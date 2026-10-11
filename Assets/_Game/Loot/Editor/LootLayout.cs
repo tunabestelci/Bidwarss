@@ -81,14 +81,14 @@ namespace Bidwars.Loot.EditorTools
             return list.Count > 0 ? list : null;
         }
 
-        /// <summary>Rastgele depo: bir turdaki palet butcesi = turda cikabilecek tum esyalarin (en cok adet) palet sayisinin %80 i, 16-60 arasi.</summary>
+        /// <summary>Rastgele depo: bir turdaki palet butcesi = turda cikabilecek tum esyalarin (en cok adet) palet sayisinin %85 i, 24-80 arasi.</summary>
         public static int RandomPalletBudget(ItemCatalog cat, int[] crateKinds)
         {
             var probe = cat.CreateRules(crateKinds.Length, 1, crateKinds, (int)CrateKind.Cardboard);
             int pallets = 0;
             foreach (var r in probe.items)
                 if (r.InPool && probe.ManifestKind(r) >= 0) pallets += (r.EffectiveMaxCount() + GameRules.StackSize - 1) / GameRules.StackSize;
-            return Mathf.Clamp(Mathf.CeilToInt(pallets * 0.8f), 16, 60);
+            return Mathf.Clamp(Mathf.CeilToInt(pallets * 0.85f), 24, 80);
         }
 
         /// <summary>Olcmeden tahmini kaplama (koli icin kesin: ParcelSize metre cinsinden dis olcu).</summary>

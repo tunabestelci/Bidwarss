@@ -19,11 +19,17 @@ namespace Bidwarss
         WarehousePlayer owner;
         Transform cameraTransform;
         GameObject cutter, prybar;
-        Transform cutterTip, pryTip;
+        Transform cutterTip, pryTipNode;
         OpeningTool previousTool, shown = OpeningTool.PryBar;
         int lastStep = -1, lastBox = -1;
         float popTime = -10f;
         static readonly Vector3 ToolInPalm = new Vector3(0,.055f,.04f);
+        // Pry bar: working end measured from the model itself (not from the ToolTip node, whose position depends on the FBX
+        // units). pryFix turns the model so that its working end (the claw, the end farthest from the grip) points along +Z,
+        // pryTip is that end in the rig's frame (metres).
+        Quaternion pryFix = Quaternion.identity;
+        Vector3 pryTip;
+        bool pryMeasured;
         public void Initialize(WarehousePlayer player)
         {
             owner = player;
@@ -31,7 +37,40 @@ namespace Bidwarss
             CarryAnchor.SetParent(transform,false);
             CarryAnchor.localPosition = new Vector3(0,1.04f,.54f);
             cutter = CreateCutter(out cutterTip);
-            prybar = CreateTool("Bruno/PryBarTool", out pryTip);
+            prybar = CreateTool("Bruno/PryBarTool", out pryTipNode);
+            if(prybar!=null)pryMeasured=MeasureToolEnd(prybar,out pryTip,out pryFix);
+        }
+        // The longest axis of the tool is its shaft; the pivot sits at the grip, so the end farther from the pivot is the
+        // working end. Returns the rotation that points that end along +Z and the end's position after that rotation.
+        static bool MeasureToolEnd(GameObject tool,out Vector3 tipRig,out Quaternion fix)
+        {
+            tipRig=new Vector3(0,0,.3f);fix=Quaternion.identity;
+            var root=tool.transform;var inverse=Quaternion.Inverse(root.rotation);
+            bool any=false;Vector3 lo=Vector3.zero,hi=Vector3.zero;
+            foreach(var renderer in tool.GetComponentsInChildren<Renderer>(true))
+            {
+                if(!(renderer is MeshRenderer)&&!(renderer is SkinnedMeshRenderer))continue;
+                Bounds local;
+                if(renderer is SkinnedMeshRenderer skinned){if(skinned.sharedMesh==null)continue;local=skinned.sharedMesh.bounds;}
+                else{var filter=renderer.GetComponent<MeshFilter>();if(filter==null||filter.sharedMesh==null)continue;local=filter.sharedMesh.bounds;}
+                var matrix=renderer.transform.localToWorldMatrix;
+                for(int i=0;i<8;i++)
+                {
+                    Vector3 corner=local.center+Vector3.Scale(local.extents,new Vector3((i&1)==0?-1:1,(i&2)==0?-1:1,(i&4)==0?-1:1));
+                    Vector3 p=inverse*(matrix.MultiplyPoint3x4(corner)-root.position);
+                    if(!any){lo=hi=p;any=true;}
+                    else{lo=Vector3.Min(lo,p);hi=Vector3.Max(hi,p);}
+                }
+            }
+            if(!any)return false;
+            Vector3 size=hi-lo;
+            int axis=size.x>=size.y&&size.x>=size.z?0:size.y>=size.z?1:2;
+            float end=Mathf.Abs(hi[axis])>=Mathf.Abs(lo[axis])?hi[axis]:lo[axis];
+            Vector3 direction=Vector3.zero;direction[axis]=Mathf.Sign(end);
+            Vector3 tip=(lo+hi)*.5f;tip[axis]=end-Mathf.Sign(end)*.006f;
+            fix=Vector3.Dot(direction,Vector3.forward)<-.99f?Quaternion.AngleAxis(180,Vector3.up):Quaternion.FromToRotation(direction,Vector3.forward);
+            tipRig=fix*tip;
+            return true;
         }
         Transform blade;
         float bladeOffset=-.034f;
@@ -93,7 +132,13 @@ namespace Bidwarss
             Vector3 desiredRight=restR,desiredLeft=restL;
             if(Tool!=OpeningTool.None)shown=Tool;
             var item=shown==OpeningTool.BoxCutter?cutter:prybar;
-            var tip=shown==OpeningTool.BoxCutter?cutterTip:pryTip;
+            var tip=shown==OpeningTool.BoxCutter?cutterTip:pryTipNode;
+            if(shown==OpeningTool.BoxCutter)
+            {
+                // Held like a knife: the handle in the fist, the blade pointing up and slightly forward.
+                desiredRotation=frame.rotation*Quaternion.Euler(-70f,8f,-6f);
+                if(cameraTransform!=null)desiredRight=frame.TransformPoint(new Vector3(.23f,-.31f,.42f));
+            }
             if(IsWorking && world.WorkPoint(workingBox,out var point,out var along,out var normal))
             {
                 if(normal.sqrMagnitude<.001f)normal=-transform.forward;
@@ -126,7 +171,7 @@ namespace Bidwarss
                     plunge=Mathf.Clamp01(1-ToolPhase*25f);
                     desiredRotation*=Quaternion.Euler(0,0,Mathf.Cos(cutT)*4.5f)*Quaternion.Euler(Mathf.Sin(cutT*.5f)*2f-plunge*18f,0,0);
                 }
-                Vector3 tipLocal=item!=null && tip!=null?item.transform.InverseTransformPoint(tip.position):new Vector3(0,0,.2f);
+                Vector3 tipLocal=shown==OpeningTool.PryBar&&pryMeasured?pryTip:item!=null && tip!=null?item.transform.InverseTransformPoint(tip.position):new Vector3(0,0,.2f);
                 Vector3 contact=point+normal*(.004f+kick*.035f-plunge*.012f+(Tool==OpeningTool.BoxCutter?Mathf.Sin(cutT*2f)*.0015f:0f))+(Tool==OpeningTool.BoxCutter?along*(stroke*(.014f+.006f*Mathf.Sin(ToolPhase*30f))):Vector3.zero);
                 desiredRight=contact-desiredRotation*(ToolInPalm+tipLocal);
                 desiredLeft=point-along*.18f+normal*.09f;
@@ -152,7 +197,7 @@ namespace Bidwarss
             RightToolWrist=Vector3.Lerp(RightToolWrist,desiredRight,blend);
             LeftToolWrist=Vector3.Lerp(LeftToolWrist,desiredLeft,blend);
             ToolRotation=Quaternion.Slerp(ToolRotation,desiredRotation,blend);
-            if(item!=null)item.transform.SetPositionAndRotation(RightToolWrist+ToolRotation*ToolInPalm,ToolRotation);
+            if(item!=null)item.transform.SetPositionAndRotation(RightToolWrist+ToolRotation*ToolInPalm,item==prybar&&pryMeasured?ToolRotation*pryFix:ToolRotation);
             ToolWeight=Mathf.MoveTowards(ToolWeight,Tool!=OpeningTool.None?1:0,Time.deltaTime*5f);
             bladeOffset=Mathf.MoveTowards(bladeOffset,Tool==OpeningTool.BoxCutter&&ToolWeight>.7f?0:-.034f,Time.deltaTime*.16f);
             if(blade!=null)blade.localPosition=new Vector3(0,0,Mathf.Round(bladeOffset/.0085f)*.0085f);

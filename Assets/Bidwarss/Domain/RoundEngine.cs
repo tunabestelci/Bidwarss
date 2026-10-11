@@ -260,9 +260,9 @@ namespace Bidwarss.Domain
                 candidates.Add(t);
             }
             if (candidates.Count == 0) throw new ArgumentException("Rastgele tur için uygun eşya yok: eşyalara Tur başına adet verin ve Loot > 2 ile kasaları yeniden dizin.");
-            // pallet budget of this round: three quarters of the pallets up to all of them (12 pallets: 9..12)
+            // pallet budget of this round: nine tenths of the pallets up to all of them (the depot is always well filled)
             int budget = Math.Max(1, rules.totalGroups);
-            int minBudget = Math.Max(1, (3 * budget + 3) / 4);
+            int minBudget = Math.Max(1, (9 * budget + 9) / 10);
             int rackBudget = minBudget + random.Range(budget - minBudget + 1);
             var counts = ChooseCounts(rules, cap, candidates, rackBudget, ref random);
             var chosen = new List<int>(); var chosenCount = new List<int>();
@@ -291,9 +291,9 @@ namespace Bidwarss.Domain
                 random.Shuffle(boxes);
                 int pack = Math.Max(1, rules.items[kind].packSize);
                 int minBoxes = Math.Min(boxes.Count, (n + pack - 1) / pack), maxBoxes = Math.Min(boxes.Count, n);
-                // two draws, the larger wins: the depot looks full (items spread over several crates), packed crates are rarer
+                // three draws, the largest wins: the depot looks full (items spread over several crates), packed crates are rarer
                 int span = maxBoxes - minBoxes + 1;
-                int b = minBoxes + Math.Max(random.Range(span), random.Range(span));
+                int b = minBoxes + Math.Max(Math.Max(random.Range(span), random.Range(span)), random.Range(span));
                 var list = new List<RoundItem>();
                 foreach (var item in items) if (item.kind == kind) list.Add(item);
                 for (int c = 0; c < b; c++)

@@ -65,9 +65,10 @@ namespace Bidwarss
                 if(boxes==null||boxes.Length==0)
                     throw new InvalidOperationException("Depoda ahşap kasa yok. Unity'de Tools > Bidwars > Loot > 2) Kasaları depoya yerleştir menüsünü çalıştır.");
                 var kinds=CrateKindInts();
-                // Random depot: totalGroups is the pallet budget of a round, never more than the pallets the scene has.
+                // Random depot: every pallet of the scene is the pallet budget of a round (a stale totalGroups from an older
+                // Loot > 2 run must not shrink the depot); the round itself uses 90-100% of it.
                 int groups=totalGroups;
-                if(catalog.randomRound&&slots!=null&&slots.Length>0)groups=Mathf.Max(1,Mathf.Min(totalGroups,slots.Length));
+                if(catalog.randomRound&&slots!=null&&slots.Length>0)groups=Mathf.Clamp(slots.Length,1,GameRules.MaxStacks);
                 var rules=catalog.CreateRules(boxes.Length, groups, kinds, kinds!=null&&Array.IndexOf(kinds,(int)CrateKind.Cardboard)>=0?(int)CrateKind.Cardboard:-1);
                 rules.crateItems=catalog.CrateItemsFromKeys(crateItemKeys,boxes.Length);
                 return rules;

@@ -101,7 +101,7 @@ namespace Bidwars.Loot.EditorTools
             var report = new System.Text.StringBuilder();
             foreach (var e in list)
             {
-                var def = LootItemTable.FindKey(e.key);
+                var def = DefOf(e);
                 if (def == null || e.sizeVersion >= SizeVersion) continue;
                 Vector3 size = FitSize(e.visualPrefab, def.size, !def.byLength);
                 report.AppendLine("  " + e.title + " -> " + def.title + ": " + Fmt(size) + " cm, " + def.kg + " kg, " + LootPools.MaskText(def.mask));
@@ -120,7 +120,7 @@ namespace Bidwars.Loot.EditorTools
             // tabloda olmayan (yeni atilan) esyalar: her turda boyuna gore 3-10 tane
             foreach (var e in list)
             {
-                if (LootItemTable.FindKey(e.key) != null || e.sizeVersion >= SizeVersion) continue;
+                if (DefOf(e) != null || e.sizeVersion >= SizeVersion) continue;
                 float m = Mathf.Max(e.realSize.x, Mathf.Max(e.realSize.y, e.realSize.z));
                 e.roundCount = m < 0.35f ? 10 : m < 1f ? 5 : 3;
                 e.sizeVersion = SizeVersion;
@@ -135,13 +135,14 @@ namespace Bidwars.Loot.EditorTools
             // Kasa Defteri: her esyanin 7 durum sinifi (sans + fiyat), kilo, olcu
             string ledger = LootLedger.Apply(catalog, false, false);
             log.AppendLine(ledger.Replace("[Loot] ", ""));
+            SanitizeSizes(catalog, log);
             // kasa basina adet: tablodaki ust sinir, gercek olcuye gore sigdigi kadar (her calismada yeniden)
             int totalItems = 0;
             foreach (var e in catalog.entries)
             {
                 int kind = LootPools.KindOf(e.crateMask);
                 if (kind < 0) continue;
-                var def = LootItemTable.FindKey(e.key);
+                var def = DefOf(e);
                 int want = def != null ? def.pack : (kind == (int)CrateKind.Cardboard ? 5 : 3);
                 e.packSize = Mathf.Clamp(Mathf.Min(want, LootPools.MaxPerCrate(e, (CrateKind)kind)), 1, 10);
                 totalItems += e.roundCount;
@@ -155,7 +156,41 @@ namespace Bidwars.Loot.EditorTools
             return msg;
         }
 
-        const int SizeVersion = 10;
+        const int SizeVersion = 11;
+
+        // Tablo satiri: once anahtar, olmazsa prefab yolu (anahtari degismis / tekrarlanmis eski girdiler de tablodan beslenir).
+        static LootItemTable.Def DefOf(ItemCatalog.Entry e)
+        {
+            var def = LootItemTable.FindKey(e.key);
+            if (def != null || e.visualPrefab == null) return def;
+            string p = AssetDatabase.GetAssetPath(e.visualPrefab);
+            if (string.IsNullOrEmpty(p) || !p.StartsWith(PrefabRoot + "/")) return null;
+            p = p.Substring(PrefabRoot.Length + 1);
+            if (p.EndsWith(".prefab")) p = p.Substring(0, p.Length - ".prefab".Length);
+            return LootItemTable.Find(p);
+        }
+
+        // Son kontrol (her kurulumda): tablodaki gercek olcu esastir. Defter ya da model olcumu tablodan %30'dan fazla saparsa
+        // (oyuncak motor, 10 cm atari gibi) tablodaki olcu kullanilir. Her esya tek tek loga yazilir.
+        static void SanitizeSizes(ItemCatalog catalog, System.Text.StringBuilder log)
+        {
+            var fixedList = new System.Text.StringBuilder();
+            foreach (var e in catalog.entries)
+            {
+                var def = DefOf(e);
+                if (def == null) continue;
+                float want = Mathf.Max(def.size.x, Mathf.Max(def.size.y, def.size.z));
+                float have = Mathf.Max(e.realSize.x, Mathf.Max(e.realSize.y, e.realSize.z));
+                float ratio = have / Mathf.Max(.001f, want);
+                bool heightOff = def.byLength == false && Mathf.Abs(e.realSize.y / Mathf.Max(.001f, def.size.y) - 1f) > .3f;
+                if (ratio < .7f || ratio > 1.3f || heightOff)
+                {
+                    fixedList.AppendLine("  " + e.title + ": " + Fmt(e.realSize) + " -> " + Fmt(def.size) + " cm (tablodaki gerçek ölçü)");
+                    e.realSize = def.size;
+                }
+            }
+            if (fixedList.Length > 0) log.AppendLine("Ölçüsü tabloya çekilen eşyalar (cm, G x Y x D):\n" + fixedList);
+        }
 
         static string Fmt(Vector3 v) { return Mathf.RoundToInt(v.x * 100f) + "x" + Mathf.RoundToInt(v.y * 100f) + "x" + Mathf.RoundToInt(v.z * 100f); }
 
@@ -199,7 +234,7 @@ namespace Bidwars.Loot.EditorTools
             try
             {
                 inst.transform.position = Vector3.zero;
-                var rs = inst.GetComponentsInChildren<Renderer>();
+                var rs = inst.GetComponentsInChildren<Renderer>().Where(x => x is MeshRenderer || x is SkinnedMeshRenderer).ToArray();   // parcacik/iz/cizgi cizicileri olcuyu sisirmesin
                 if (rs.Length == 0) return Vector3.zero;
                 Bounds b = rs[0].bounds;
                 foreach (var r in rs) b.Encapsulate(r.bounds);

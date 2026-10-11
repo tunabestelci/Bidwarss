@@ -26,4 +26,4 @@ Get-ChildItem $src -Recurse -File | ForEach-Object {
     $count++
 }
 Write-Host "$count dosya kopyalandi. Eski halleri: $backup" -ForegroundColor Green
-Write-Host "Simdi Unity'yi ac, derlenmesini bekle, sonra Tools > Bidwars > Loot > 2) Kasalari depoya yerlestir calistir."
+Write-Host "Simdi Unity yi ac, derlenmesini bekle, sonra SIRAYLA: Tools > Bidwars > Loot > 1) Esya katalogunu kur, sonra Tools > Bidwars > Loot > 2) Kasalari depoya yerlestir."

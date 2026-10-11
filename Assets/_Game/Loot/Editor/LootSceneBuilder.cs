@@ -67,7 +67,7 @@ namespace Bidwars.Loot.EditorTools
                     {
                         boxes = LootLayout.Boxes(catalog, scale);
                         float need, have; LootLayout.Totals(boxes, containers, out need, out have);
-                        if (need <= have * 0.88f) { if (scale < 1f) Debug.LogWarning("[Loot] Rastgele depo: kasalar konteynerlere sığsın diye eşya başına ayrılan kasa %" + Mathf.RoundToInt(scale * 100) + "'e düşürüldü (turdaki en çok adet buna göre azalır)."); break; }
+                        if (need <= have * 0.95f) { if (scale < 1f) Debug.LogWarning("[Loot] Rastgele depo: kasalar konteynerlere sığsın diye eşya başına ayrılan kasa %" + Mathf.RoundToInt(scale * 100) + "'e düşürüldü (turdaki en çok adet buna göre azalır)."); break; }
                     }
                 }
                 return boxes;
